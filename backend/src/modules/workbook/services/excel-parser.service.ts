@@ -670,7 +670,7 @@ export class ExcelParserService {
       if (prevMonthKey === '2025-12') {
         throw new BadRequestException(
           `Validation Error: Baseline data for December 2025 is missing. ` +
-          `Please run the database seed operation first.`
+          `Please generate the ITD file from a Southlake file first and upload it using 'Upload Excel Workbook' to seed the database.`
         );
       } else {
         throw new BadRequestException(

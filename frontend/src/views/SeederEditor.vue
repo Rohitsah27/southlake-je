@@ -4,7 +4,7 @@
       <h2>🛠️ ITD Seeder Editor</h2>
       <p class="description-text">
         View and edit the raw Inception-to-Date seeder JSON files. Updates made here are saved directly to the seeder files.
-        After making edits, click the global <strong>⚡ Seed ITD Data</strong> button in the top header to reload the database with your modified values.
+        After making edits, clear the database and upload your ITD seeder Excel workbook using the upload button to load your modified values.
       </p>
     </div>
 

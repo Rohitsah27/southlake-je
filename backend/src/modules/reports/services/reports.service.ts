@@ -279,25 +279,59 @@ export class ReportsService {
       const prevSource = prevStateEx.workbook?.source;
 
       if (prevSource === 'FUT') {
-        prevLossReserves = 0;
-        prevLossIBNR = prevStateEx.lu ? sum(prevStateEx.lu) : 0;
-        prevULAEIBNR = prevStateEx.aeu ? sum(prevStateEx.aeu) : 0;
+        const hasPrevDetailedReserves = prevStateEx && (
+          (prevStateEx.loss_ibnr && prevStateEx.loss_ibnr.some(v => Number(v) !== 0)) ||
+          (prevStateEx.lae_ibnr_dcc && prevStateEx.lae_ibnr_dcc.some(v => Number(v) !== 0)) ||
+          (prevStateEx.lae_ibnr_aoe && prevStateEx.lae_ibnr_aoe.some(v => Number(v) !== 0)) ||
+          (prevStateEx.ulae_ibnr && prevStateEx.ulae_ibnr.some(v => Number(v) !== 0))
+        );
 
-        if (isDccActive) {
-          prevDCCReserves = 0;
-          prevDCCIBNR = prevStateEx.laeu ? sum(prevStateEx.laeu) : 0;
-          prevAOEReserves = 0;
-          prevAOEIBNR = 0;
-        } else if (isAoeActive) {
-          prevAOEReserves = 0;
-          prevAOEIBNR = prevStateEx.laeu ? sum(prevStateEx.laeu) : 0;
-          prevDCCReserves = 0;
-          prevDCCIBNR = 0;
+        if (hasPrevDetailedReserves) {
+          prevLossReserves = prevStateEx.loss_reserves ? sum(prevStateEx.loss_reserves) : 0;
+          prevLossIBNR = prevStateEx.loss_ibnr ? sum(prevStateEx.loss_ibnr) : 0;
+          prevULAEIBNR = prevStateEx.ulae_ibnr ? sum(prevStateEx.ulae_ibnr) : 0;
+
+          if (isDccActive) {
+            prevDCCReserves = (prevStateEx.lae_reserves_dcc ? sum(prevStateEx.lae_reserves_dcc) : 0) +
+                              (prevStateEx.lae_reserves_aoe ? sum(prevStateEx.lae_reserves_aoe) : 0);
+            prevDCCIBNR = (prevStateEx.lae_ibnr_dcc ? sum(prevStateEx.lae_ibnr_dcc) : 0) +
+                          (prevStateEx.lae_ibnr_aoe ? sum(prevStateEx.lae_ibnr_aoe) : 0);
+            prevAOEReserves = 0;
+            prevAOEIBNR = 0;
+          } else if (isAoeActive) {
+            prevAOEReserves = (prevStateEx.lae_reserves_aoe ? sum(prevStateEx.lae_reserves_aoe) : 0) +
+                              (prevStateEx.lae_reserves_dcc ? sum(prevStateEx.lae_reserves_dcc) : 0);
+            prevAOEIBNR = (prevStateEx.lae_ibnr_aoe ? sum(prevStateEx.lae_ibnr_aoe) : 0) +
+                          (prevStateEx.lae_ibnr_dcc ? sum(prevStateEx.lae_ibnr_dcc) : 0);
+            prevDCCReserves = 0;
+            prevDCCIBNR = 0;
+          } else {
+            prevDCCReserves = 0;
+            prevDCCIBNR = 0;
+            prevAOEReserves = 0;
+            prevAOEIBNR = 0;
+          }
         } else {
-          prevDCCReserves = 0;
-          prevDCCIBNR = 0;
-          prevAOEReserves = 0;
-          prevAOEIBNR = 0;
+          prevLossReserves = 0;
+          prevLossIBNR = prevStateEx.lu ? sum(prevStateEx.lu) : 0;
+          prevULAEIBNR = prevStateEx.aeu ? sum(prevStateEx.aeu) : 0;
+
+          if (isDccActive) {
+            prevDCCReserves = 0;
+            prevDCCIBNR = prevStateEx.laeu ? sum(prevStateEx.laeu) : 0;
+            prevAOEReserves = 0;
+            prevAOEIBNR = 0;
+          } else if (isAoeActive) {
+            prevAOEReserves = 0;
+            prevAOEIBNR = prevStateEx.laeu ? sum(prevStateEx.laeu) : 0;
+            prevDCCReserves = 0;
+            prevDCCIBNR = 0;
+          } else {
+            prevDCCReserves = 0;
+            prevDCCIBNR = 0;
+            prevAOEReserves = 0;
+            prevAOEIBNR = 0;
+          }
         }
       } else {
         prevLossReserves = prevStateEx.loss_reserves ? sum(prevStateEx.loss_reserves) : 0;

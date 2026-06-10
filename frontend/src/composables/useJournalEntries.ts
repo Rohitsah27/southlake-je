@@ -226,7 +226,14 @@ export function useJournalEntries(workbooksList: Ref<Workbook[]>) {
 
     if (prevEx) {
       prevUEP = sumArray(prevEx.uep);
-      if (prevWb.value?.source === 'FUT') {
+      const hasPrevDetailed = prevEx && (
+        (prevEx.loss_ibnr && sumArray(prevEx.loss_ibnr) !== 0) ||
+        (prevEx.lae_ibnr_dcc && sumArray(prevEx.lae_ibnr_dcc) !== 0) ||
+        (prevEx.lae_ibnr_aoe && sumArray(prevEx.lae_ibnr_aoe) !== 0) ||
+        (prevEx.ulae_ibnr && sumArray(prevEx.ulae_ibnr) !== 0)
+      );
+
+      if (prevWb.value?.source === 'FUT' && !hasPrevDetailed) {
         prevLossIBNR = sumArray(prevEx.lu);
         prevDCCIBNR = sumArray(prevEx.laeu);
         prevULAEIBNR = sumArray(prevEx.aeu);
@@ -306,7 +313,14 @@ export function useJournalEntries(workbooksList: Ref<Workbook[]>) {
           uep: newPrevUep,
         };
 
-        if (prevWb.value?.source === 'FUT') {
+        const hasPrevDetailed = prevEx && (
+          (prevEx.loss_ibnr && sumArray(prevEx.loss_ibnr) !== 0) ||
+          (prevEx.lae_ibnr_dcc && sumArray(prevEx.lae_ibnr_dcc) !== 0) ||
+          (prevEx.lae_ibnr_aoe && sumArray(prevEx.lae_ibnr_aoe) !== 0) ||
+          (prevEx.ulae_ibnr && sumArray(prevEx.ulae_ibnr) !== 0)
+        );
+
+        if (prevWb.value?.source === 'FUT' && !hasPrevDetailed) {
           updateObj.lu = distributeTotal(prevEx.lu, paramsForm.value.prevLossIBNR);
           updateObj.laeu = distributeTotal(prevEx.laeu, paramsForm.value.prevDCCIBNR);
           updateObj.aeu = distributeTotal(prevEx.aeu, paramsForm.value.prevULAEIBNR);

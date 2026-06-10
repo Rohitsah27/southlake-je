@@ -29,13 +29,25 @@ export class WorkbookService {
   }
 
   async findOne(id: number): Promise<Workbook> {
-    const workbook = await this.workbookRepo.findOne({
+    let workbook = await this.workbookRepo.findOne({
       where: { id },
       relations: { stateExhibits: true, cashSettlement: true },
     });
     if (!workbook) {
       throw new NotFoundException(`Workbook with ID ${id} not found`);
     }
+
+    if (workbook.source === 'FUT') {
+      await this.recalculateFUTReserves(id);
+      const reloaded = await this.workbookRepo.findOne({
+        where: { id },
+        relations: { stateExhibits: true, cashSettlement: true },
+      });
+      if (reloaded) {
+        workbook = reloaded;
+      }
+    }
+
     if (workbook.stateExhibits) {
       workbook.stateExhibits.sort((a, b) => {
         if (a.stateCode === 'TOTAL') return -1;
@@ -52,7 +64,12 @@ export class WorkbookService {
   }
 
   async uploadWorkbook(fileBuffer: Buffer, filename: string, forceOverwrite: boolean = false): Promise<any> {
-    return this.excelParserService.parseWorkbook(fileBuffer, filename, forceOverwrite);
+    const result = await this.excelParserService.parseWorkbook(fileBuffer, filename, forceOverwrite);
+    if (result && result.workbook && result.workbook.source === 'FUT') {
+      await this.recalculateFUTReserves(result.workbook.id);
+      result.workbook = await this.findOne(result.workbook.id);
+    }
+    return result;
   }
 
   async generateITDExcel(fileBuffer: Buffer): Promise<Buffer> {
@@ -78,6 +95,81 @@ export class WorkbookService {
       throw new NotFoundException(`State exhibit ${stateCode} not found in workbook ${workbookId}`);
     }
 
+    if (stateCode === 'TOTAL') {
+      const fields = Object.keys(dto) as (keyof UpdateExhibitDto)[];
+      const nonTotalExhibits = workbook.stateExhibits.filter((e) => e.stateCode !== 'TOTAL');
+      
+      fields.forEach((field) => {
+        const totalValues = dto[field];
+        if (totalValues !== undefined) {
+          for (let c = 0; c < 3; c++) {
+            const colTotal = Number(totalValues[c] || 0);
+            
+            const weights = nonTotalExhibits.map((ex) => {
+              const existingVal = Number((ex as any)[field]?.[c] || 0);
+              if (Math.abs(existingVal) > 0.001) {
+                return { ex, val: existingVal, isField: true };
+              }
+              const pwVal = Number(ex.pw?.[c] || 0);
+              if (Math.abs(pwVal) > 0.001) {
+                return { ex, val: pwVal, isField: false };
+              }
+              const pw1Val = Number(ex.pw?.[1] || 0);
+              if (Math.abs(pw1Val) > 0.001) {
+                return { ex, val: pw1Val, isField: false };
+              }
+              return { ex, val: 1, isField: false };
+            });
+
+            let activeWeights = weights;
+            const hasFieldWeights = weights.some(w => w.isField);
+            if (hasFieldWeights) {
+              activeWeights = weights.map(w => w.isField ? w : { ...w, val: 0 });
+            }
+
+            const sumWeights = activeWeights.reduce((s, w) => s + Math.abs(w.val), 0);
+            
+            let distributedSum = 0;
+            const stateValues = activeWeights.map((w) => {
+              let val = 0;
+              if (sumWeights > 0.001) {
+                val = (colTotal * Math.abs(w.val)) / sumWeights;
+              } else {
+                val = colTotal / nonTotalExhibits.length;
+              }
+              const roundedVal = Math.round(val * 100) / 100;
+              distributedSum += roundedVal;
+              return roundedVal;
+            });
+
+            const diff = colTotal - distributedSum;
+            if (Math.abs(diff) > 0.001) {
+              let maxIdx = 0;
+              let maxVal = -1;
+              activeWeights.forEach((w, idx) => {
+                if (Math.abs(w.val) > maxVal) {
+                  maxVal = Math.abs(w.val);
+                  maxIdx = idx;
+                }
+              });
+              stateValues[maxIdx] = Number((stateValues[maxIdx] + diff).toFixed(2));
+            }
+
+            nonTotalExhibits.forEach((ex, idx) => {
+              if (!(ex as any)[field]) {
+                (ex as any)[field] = [0, 0, 0];
+              }
+              (ex as any)[field][c] = stateValues[idx];
+            });
+          }
+        }
+      });
+
+      if (nonTotalExhibits.length > 0) {
+        await this.stateExhibitRepo.save(nonTotalExhibits);
+      }
+    }
+
     Object.keys(dto).forEach((key) => {
       if ((dto as any)[key] !== undefined) {
         (exhibit as any)[key] = (dto as any)[key];
@@ -85,8 +177,15 @@ export class WorkbookService {
     });
 
     const savedExhibit = await this.stateExhibitRepo.save(exhibit);
-    await this.recalculateTotalExhibit(workbookId);
-    return savedExhibit;
+    if (workbook.source === 'FUT') {
+      await this.recalculateFUTReserves(workbookId);
+    } else {
+      await this.recalculateTotalExhibit(workbookId);
+    }
+    const reloadedExhibit = await this.stateExhibitRepo.findOne({
+      where: { workbookId, stateCode },
+    });
+    return reloadedExhibit || savedExhibit;
   }
 
   async updateRates(workbookId: number, dto: UpdateRatesDto): Promise<Workbook> {
@@ -95,7 +194,11 @@ export class WorkbookService {
       ...workbook.rates,
       ...dto,
     };
-    return this.workbookRepo.save(workbook);
+    const savedWorkbook = await this.workbookRepo.save(workbook);
+    if (savedWorkbook.source === 'FUT') {
+      await this.recalculateFUTReserves(workbookId);
+    }
+    return this.findOne(workbookId);
   }
 
   async updateCashSettlement(workbookId: number, dto: UpdateCashSettlementDto): Promise<CashSettlement> {
@@ -173,6 +276,196 @@ export class WorkbookService {
     return `${year}-${String(month).padStart(2, '0')}`;
   }
 
+  async recalculateFUTReserves(workbookId: number): Promise<void> {
+    const workbook = await this.workbookRepo.findOne({
+      where: { id: workbookId },
+      relations: { stateExhibits: true },
+    });
+    if (!workbook || workbook.source !== 'FUT') {
+      return;
+    }
+
+    const prevWb = await this.findPreviousWorkbookFor(workbook);
+    const prevSource = prevWb?.source;
+    const prevStateExhibits = prevWb?.stateExhibits || [];
+
+    const rates = workbook.rates || {};
+    const lossPick = rates.lossPick ?? 51.8;
+    const laeDcc = rates.laeDcc ?? 6.2;
+    const laeAoe = rates.laeAoe ?? 0.0;
+
+    const isDccActive = laeDcc > 0;
+    const isAoeActive = laeAoe > 0;
+
+    const nonTotalExhibits = workbook.stateExhibits.filter((e) => e.stateCode !== 'TOTAL');
+
+    for (const ex of nonTotalExhibits) {
+      const prevEx = prevStateExhibits.find((pe) => pe.stateCode === ex.stateCode);
+
+      const pw = ex.pw || [0, 0, 0];
+      const uep = ex.uep || [0, 0, 0];
+      const lp = ex.lp || [0, 0, 0];
+      const laep = ex.laep || [0, 0, 0];
+      const lu = ex.lu || [0, 0, 0];
+      const laeu = ex.laeu || [0, 0, 0];
+      const aeu = ex.aeu || [0, 0, 0];
+
+      const prev_uep = prevEx?.uep || [0, 0, 0];
+      const prev_lu = prevEx?.lu || [0, 0, 0];
+      const prev_laeu = prevEx?.laeu || [0, 0, 0];
+      const prev_aeu = prevEx?.aeu || [0, 0, 0];
+
+      const loss_reserves = [0, 0, 0];
+      const loss_ibnr = [0, 0, 0];
+      const lae_reserves_dcc = [0, 0, 0];
+      const lae_ibnr_dcc = [0, 0, 0];
+      const lae_reserves_aoe = [0, 0, 0];
+      const lae_ibnr_aoe = [0, 0, 0];
+      const ulae_ibnr = [0, 0, 0];
+
+      for (let c = 0; c < 3; c++) {
+        const pwVal = Number(pw[c] || 0);
+        const currUEP = Number(uep[c] || 0);
+        const lossesPaid = Number(lp[c] || 0);
+
+        let dccPaid = 0;
+        let aoePaid = 0;
+        const rawLaep = Number(laep[c] || 0);
+        if (isDccActive) {
+          dccPaid = rawLaep;
+          aoePaid = 0;
+        } else if (isAoeActive) {
+          aoePaid = rawLaep;
+          dccPaid = 0;
+        }
+
+        let prevUEPVal = 0;
+        let prevLossReservesVal = 0;
+        let prevLossIBNRVal = 0;
+        let prevDCCReservesVal = 0;
+        let prevDCCIBNRVal = 0;
+        let prevAOEReservesVal = 0;
+        let prevAOEIBNRVal = 0;
+        let prevULAEIBNRVal = 0;
+
+        if (prevEx) {
+          prevUEPVal = Number(prev_uep[c] || 0);
+          if (prevSource === 'FUT') {
+            const hasPrevDetailedReserves = prevEx && (
+              prevEx.loss_ibnr?.some(v => Number(v) !== 0) ||
+              prevEx.lae_ibnr_dcc?.some(v => Number(v) !== 0) ||
+              prevEx.lae_ibnr_aoe?.some(v => Number(v) !== 0) ||
+              prevEx.ulae_ibnr?.some(v => Number(v) !== 0)
+            );
+
+            if (hasPrevDetailedReserves) {
+              prevLossReservesVal = Number(prevEx.loss_reserves?.[c] || 0);
+              prevLossIBNRVal = Number(prevEx.loss_ibnr?.[c] || 0);
+              prevULAEIBNRVal = Number(prevEx.ulae_ibnr?.[c] || 0);
+
+              if (isDccActive) {
+                prevDCCReservesVal = Number(prevEx.lae_reserves_dcc?.[c] || 0) + Number(prevEx.lae_reserves_aoe?.[c] || 0);
+                prevDCCIBNRVal = Number(prevEx.lae_ibnr_dcc?.[c] || 0) + Number(prevEx.lae_ibnr_aoe?.[c] || 0);
+                prevAOEReservesVal = 0;
+                prevAOEIBNRVal = 0;
+              } else if (isAoeActive) {
+                prevAOEReservesVal = Number(prevEx.lae_reserves_aoe?.[c] || 0) + Number(prevEx.lae_reserves_dcc?.[c] || 0);
+                prevAOEIBNRVal = Number(prevEx.lae_ibnr_aoe?.[c] || 0) + Number(prevEx.lae_ibnr_dcc?.[c] || 0);
+                prevDCCReservesVal = 0;
+                prevDCCIBNRVal = 0;
+              }
+            } else {
+              prevLossReservesVal = 0;
+              prevLossIBNRVal = Number(prev_lu[c] || 0);
+              prevULAEIBNRVal = Number(prev_aeu[c] || 0);
+
+              if (isDccActive) {
+                prevDCCReservesVal = 0;
+                prevDCCIBNRVal = Number(prev_laeu[c] || 0);
+                prevAOEReservesVal = 0;
+                prevAOEIBNRVal = 0;
+              } else if (isAoeActive) {
+                prevAOEReservesVal = 0;
+                prevAOEIBNRVal = Number(prev_laeu[c] || 0);
+                prevDCCReservesVal = 0;
+                prevDCCIBNRVal = 0;
+              }
+            }
+          } else {
+            prevLossReservesVal = Number(prevEx.loss_reserves?.[c] || 0);
+            prevLossIBNRVal = Number(prevEx.loss_ibnr?.[c] || 0);
+            prevULAEIBNRVal = Number(prevEx.ulae_ibnr?.[c] || 0);
+
+            if (isDccActive) {
+              prevDCCReservesVal = Number(prevEx.lae_reserves_dcc?.[c] || 0) + Number(prevEx.lae_reserves_aoe?.[c] || 0);
+              prevDCCIBNRVal = Number(prevEx.lae_ibnr_dcc?.[c] || 0) + Number(prevEx.lae_ibnr_aoe?.[c] || 0);
+              prevAOEReservesVal = 0;
+              prevAOEIBNRVal = 0;
+            } else if (isAoeActive) {
+              prevAOEReservesVal = Number(prevEx.lae_reserves_aoe?.[c] || 0) + Number(prevEx.lae_reserves_dcc?.[c] || 0);
+              prevAOEIBNRVal = Number(prevEx.lae_ibnr_aoe?.[c] || 0) + Number(prevEx.lae_ibnr_dcc?.[c] || 0);
+              prevDCCReservesVal = 0;
+              prevDCCIBNRVal = 0;
+            }
+          }
+        }
+
+        const changeUEP = prevUEPVal - currUEP;
+        const premiumsEarned = pwVal + changeUEP;
+
+        const currLossReservesVal = Number(lu[c] || 0);
+        let currDCCReservesVal = 0;
+        let currAOEReservesVal = 0;
+
+        if (isDccActive) {
+          currDCCReservesVal = Number(laeu[c] || 0) + Number(aeu[c] || 0);
+          currAOEReservesVal = 0;
+        } else if (isAoeActive) {
+          currAOEReservesVal = Number(laeu[c] || 0) + Number(aeu[c] || 0);
+          currDCCReservesVal = 0;
+        }
+
+        const ultimateLoss = premiumsEarned * (lossPick / 100);
+        const ultimateLAEDcc = premiumsEarned * (laeDcc / 100);
+        const ultimateLAEAoe = premiumsEarned * (laeAoe / 100);
+
+        const changeLossReserves = currLossReservesVal - prevLossReservesVal;
+        const changeLossIBNR = ultimateLoss - lossesPaid - changeLossReserves;
+        const currLossIBNRVal = prevLossIBNRVal + changeLossIBNR;
+
+        const changeDCCReserves = currDCCReservesVal - prevDCCReservesVal;
+        const changeDCCIBNR = ultimateLAEDcc - dccPaid - changeDCCReserves;
+        const currDCCIBNRVal = prevDCCIBNRVal + changeDCCIBNR;
+
+        const changeAOEReserves = currAOEReservesVal - prevAOEReservesVal;
+        const changeAOEIBNR = ultimateLAEAoe - aoePaid - changeAOEReserves;
+        const currAOEIBNRVal = prevAOEIBNRVal + changeAOEIBNR;
+
+        const changeULAEIBNR = (0.5 * changeLossReserves + changeLossIBNR) * 0.005;
+        const currULAEIBNRVal = prevULAEIBNRVal + changeULAEIBNR;
+
+        loss_reserves[c] = Number(currLossReservesVal.toFixed(2));
+        loss_ibnr[c] = Number(currLossIBNRVal.toFixed(2));
+        lae_reserves_dcc[c] = Number((isDccActive ? currDCCReservesVal : 0).toFixed(2));
+        lae_ibnr_dcc[c] = Number((isDccActive ? currDCCIBNRVal : 0).toFixed(2));
+        lae_reserves_aoe[c] = Number((isAoeActive ? currAOEReservesVal : 0).toFixed(2));
+        lae_ibnr_aoe[c] = Number((isAoeActive ? currAOEIBNRVal : 0).toFixed(2));
+        ulae_ibnr[c] = Number(currULAEIBNRVal.toFixed(2));
+      }
+
+      ex.loss_reserves = loss_reserves;
+      ex.loss_ibnr = loss_ibnr;
+      ex.lae_reserves_dcc = lae_reserves_dcc;
+      ex.lae_ibnr_dcc = lae_ibnr_dcc;
+      ex.lae_reserves_aoe = lae_reserves_aoe;
+      ex.lae_ibnr_aoe = lae_ibnr_aoe;
+      ex.ulae_ibnr = ulae_ibnr;
+    }
+
+    await this.stateExhibitRepo.save(nonTotalExhibits);
+    await this.recalculateTotalExhibit(workbookId);
+  }
+
   private async recalculateTotalExhibit(workbookId: number): Promise<void> {
     const allExhibits = await this.stateExhibitRepo.find({ where: { workbookId } });
     const nonTotalExhibits = allExhibits.filter((e) => e.stateCode !== 'TOTAL');
@@ -200,7 +493,7 @@ export class WorkbookService {
           sums[i] += Number(arr[i] || 0);
         }
       });
-      (totalExhibit as any)[field] = sums;
+      (totalExhibit as any)[field] = sums.map((s) => Number(s.toFixed(2)));
     });
 
     await this.stateExhibitRepo.save(totalExhibit);

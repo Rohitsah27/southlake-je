@@ -91,7 +91,11 @@ let ItdSeederService = ItdSeederService_1 = class ItdSeederService {
         const statesDir = path.join(process.cwd(), 'src/database/seeds/states');
         const workspaceDir = 'C:/Users/ASUS/Desktop/Treaty - 1/itd_states_seeder_data';
         this.recalculateTotalSeederFile(statesDir, workspaceDir);
-        await this.clearAllData();
+        const existingItd = await this.workbookRepo.find({ where: { program: 'DPR APD', source: 'ITD' } });
+        if (existingItd.length > 0) {
+            this.logger.log(`Removing ${existingItd.length} existing ITD workbook(s)...`);
+            await this.workbookRepo.remove(existingItd);
+        }
         if (!fs.existsSync(statesDir)) {
             throw new Error(`Seeder states directory not found at ${statesDir}. Please run extraction first.`);
         }

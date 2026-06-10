@@ -24,5 +24,6 @@ export declare class WorkbookService {
     findPreviousWorkbook(program: string, monthKey: string, source: string): Promise<Workbook | null>;
     findPreviousWorkbookFor(workbook: Workbook): Promise<Workbook | null>;
     private getPreviousMonthKey;
+    recalculateFUTReserves(workbookId: number): Promise<void>;
     private recalculateTotalExhibit;
 }

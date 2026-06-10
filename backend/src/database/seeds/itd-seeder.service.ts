@@ -53,8 +53,12 @@ export class ItdSeederService {
     // Recalculate TOTAL.json on disk first so it has correct summed values
     this.recalculateTotalSeederFile(statesDir, workspaceDir);
 
-    // 1. Wipe database first to avoid conflicts
-    await this.clearAllData();
+    // 1. Remove only existing ITD workbooks for this program to avoid conflicts
+    const existingItd = await this.workbookRepo.find({ where: { program: 'DPR APD', source: 'ITD' } });
+    if (existingItd.length > 0) {
+      this.logger.log(`Removing ${existingItd.length} existing ITD workbook(s)...`);
+      await this.workbookRepo.remove(existingItd);
+    }
     if (!fs.existsSync(statesDir)) {
       throw new Error(`Seeder states directory not found at ${statesDir}. Please run extraction first.`);
     }

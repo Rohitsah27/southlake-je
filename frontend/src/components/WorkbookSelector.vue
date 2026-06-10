@@ -7,7 +7,7 @@
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
           <button class="upload-btn" @click="triggerFileInput">
             <span class="upload-icon">📂</span>
-            <span>Upload Excel Workbook</span>
+            <span>{{ itdSeeded ? 'Upload Excel Workbook' : 'Upload ITD Seeder Workbook' }}</span>
           </button>
           <button class="upload-btn generate-itd-btn" :disabled="generatingItd" @click="triggerITDFileInput">
             <span class="upload-icon">⚡</span>
@@ -17,8 +17,8 @@
         <input ref="fileInput" type="file" accept=".xlsx, .xls" @change="onUpload" style="display: none" />
         <input ref="itdFileInput" type="file" accept=".xlsx, .xls" @change="onGenerateITD" style="display: none" />
         <span class="upload-help-text">
-          <template v-if="itdSeeded">✅ ITD data loaded. Upload December 2025 Excel to seed or update ITD baseline.</template>
-          <template v-else>⚠️ Baseline missing: Upload a December 2025 Excel workbook or click "Seed ITD Data" to seed the database.</template>
+          <template v-if="itdSeeded">✅ ITD data loaded. Upload January, February, or March Excel workbook.</template>
+          <template v-else>⚠️ Baseline missing: Generate ITD file first, then upload it here to seed the database.</template>
         </span>
       </div>
     </div>
@@ -26,7 +26,7 @@
     <!-- Warning when ITD not seeded -->
     <div v-if="!itdSeeded" class="itd-warning">
       <span class="warning-icon">🔒</span>
-      <span>ITD data must be seeded first. Click <strong>⚡ Seed ITD Data</strong> in the header.</span>
+      <span>ITD seeder data must be uploaded first. Please use the <strong>⚡ Generate ITD from Southlake File</strong> button, then upload the generated file.</span>
     </div>
 
     <!-- Active Workbook Selector -->

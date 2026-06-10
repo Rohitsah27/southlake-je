@@ -24,9 +24,6 @@
         <button class="btn btn-danger btn-sm" :disabled="loading" @click="handleClearDb">
           🗑️ Clear DB
         </button>
-        <button class="btn btn-success btn-sm" :disabled="loading" @click="handleSeedDb">
-          ⚡ Seed ITD Data
-        </button>
       </div>
     </header>
 
@@ -63,29 +60,9 @@ export default defineComponent({
       }
     };
 
-    const handleSeedDb = async () => {
-      loading.value = true;
-      try {
-        const res = await api.seedDatabase();
-        const resultsStr = res.results
-          .map((r: any) => `${r.file}: ${r.success ? '✅ Success' : '❌ Failed (' + r.message + ')'}`)
-          .join('\n');
-        localStorage.removeItem('starlight_active_workbook_key_db');
-        alert(`ITD Seeding completed!\n\n${resultsStr}\n\nITD workbook will now load.`);
-        window.location.reload();
-      } catch (err: any) {
-        console.error(err);
-        const errMsg = err?.message || 'Unknown error';
-        alert(`Failed to run ITD seeder: ${errMsg}\n\nMake sure you have restarted the backend server after recent code changes.`);
-      } finally {
-        loading.value = false;
-      }
-    };
-
     return {
       loading,
       handleClearDb,
-      handleSeedDb,
     };
   },
 });
