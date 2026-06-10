@@ -1,0 +1,101 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UploadedFile,
+  UseInterceptors,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+  ValidationPipe,
+  Res,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { WorkbookService } from '../services/workbook.service';
+import { UpdateExhibitDto } from '../dto/update-exhibit.dto';
+import { UpdateRatesDto } from '../dto/update-rates.dto';
+import { UpdateCashSettlementDto } from '../dto/update-cash-settlement.dto';
+import { UpdateMappingsDto } from '../dto/update-mappings.dto';
+
+@Controller('api/workbooks')
+export class WorkbookController {
+  constructor(private readonly workbookService: WorkbookService) {}
+
+  @Get()
+  async findAll() {
+    return this.workbookService.findAll();
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.workbookService.findOne(id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    await this.workbookService.delete(id);
+  }
+
+  @Put(':id/mappings')
+  async updateMappings(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationPipe({ whitelist: true })) dto: UpdateMappingsDto,
+  ) {
+    return this.workbookService.updateMappings(id, dto);
+  }
+
+  @Put(':id/exhibits/:stateCode')
+  async updateExhibit(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('stateCode') stateCode: string,
+    @Body(new ValidationPipe({ whitelist: true })) dto: UpdateExhibitDto,
+  ) {
+    return this.workbookService.updateExhibit(id, stateCode.toUpperCase(), dto);
+  }
+
+  @Put(':id/rates')
+  async updateRates(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationPipe({ whitelist: true })) dto: UpdateRatesDto,
+  ) {
+    return this.workbookService.updateRates(id, dto);
+  }
+
+  @Put(':id/cash-settlement')
+  async updateCashSettlement(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationPipe({ whitelist: true })) dto: UpdateCashSettlementDto,
+  ) {
+    return this.workbookService.updateCashSettlement(id, dto);
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('overwrite') overwrite?: string,
+  ) {
+    const forceOverwrite = overwrite === 'true';
+    return this.workbookService.uploadWorkbook(file.buffer, file.originalname, forceOverwrite);
+  }
+
+  @Post('generate-itd')
+  @UseInterceptors(FileInterceptor('file'))
+  async generateITDExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: any,
+  ) {
+    const buffer = await this.workbookService.generateITDExcel(file.buffer);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename=ITD_Seeder_${file.originalname}`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+}

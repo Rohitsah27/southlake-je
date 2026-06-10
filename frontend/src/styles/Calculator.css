@@ -1,0 +1,327 @@
+.calculator-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.upload-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.upload-help-text {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.workbook-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.selector-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.workbook-select {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 5rem 2rem;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  border: 2px dashed var(--border-color);
+}
+
+.empty-icon {
+  font-size: 3.5rem;
+}
+
+.workspace-area {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tab-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  gap: 1rem;
+}
+
+.tabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-text-muted);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.tab-btn:hover {
+  color: var(--color-text);
+  background-color: var(--bg-surface-hover);
+}
+
+.tab-btn.active {
+  color: var(--color-text);
+  background-color: var(--color-primary-glow);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.tab-btn.total-tab.active {
+  background-color: var(--color-secondary-glow);
+  border-color: rgba(14, 165, 233, 0.3);
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.excel-table th {
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 0.75rem 0.85rem;
+  background-color: rgba(30, 41, 59, 0.4);
+  border: 1px solid var(--border-color);
+  color: var(--color-text);
+  text-align: center;
+}
+
+.col-sub {
+  font-size: 0.72rem;
+  font-weight: normal;
+  color: var(--color-text-muted);
+}
+
+.excel-table td {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border-color);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  height: 2.4rem;
+}
+
+.row-label {
+  font-family: var(--font-sans) !important;
+  font-weight: 500;
+  color: var(--color-text);
+  background-color: rgba(30, 41, 59, 0.15);
+  width: 32%;
+}
+
+.num-col {
+  text-align: right;
+  width: 20%;
+}
+
+.total-col {
+  text-align: right;
+  width: 22%;
+  background-color: rgba(14, 165, 233, 0.02);
+  font-weight: 700;
+  color: var(--color-secondary);
+}
+
+.yellow-cell {
+  background-color: var(--yellow-cell-bg);
+  transition: var(--transition-smooth);
+}
+
+.yellow-cell:focus-within {
+  background-color: var(--yellow-cell-focus);
+}
+
+.cell-input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none !important;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-align: right;
+  outline: none;
+  padding: 0;
+}
+
+.cell-span {
+  display: block;
+  text-align: right;
+}
+
+.grand-total-row td {
+  background-color: var(--grand-total-bg) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important;
+  color: var(--color-text) !important;
+  border-top: 2px solid var(--border-hover);
+  border-bottom: 2px double var(--border-hover);
+}
+
+.grand-total-row td.num-col {
+  font-family: var(--font-mono) !important;
+}
+
+/* Cash Settlement Layout */
+.cash-settlement-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .cash-settlement-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.params-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  height: fit-content;
+}
+
+.params-sidebar h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.4rem;
+  color: var(--color-secondary);
+}
+
+.param-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.param-group label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding-right: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+}
+
+.input-wrapper span {
+  position: absolute;
+  right: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+.statement-sheet {
+  overflow-x: auto;
+}
+
+.bold-row td {
+  font-weight: 700;
+}
+
+.divider-row td {
+  border-bottom: 1.5px solid var(--border-hover);
+}
+
+.header-divider td {
+  border-top: 1.5px solid var(--border-color);
+}
+
+.subtotal-row td {
+  background-color: rgba(14, 165, 233, 0.04) !important;
+  font-weight: 700;
+  border-top: 1.5px solid var(--color-secondary);
+  border-bottom: 1.5px solid var(--color-secondary);
+}
+
+.reinsurer-bal-row td {
+  background-color: rgba(139, 92, 246, 0.04) !important;
+  border-top: 1.5px solid var(--color-primary);
+  border-bottom: 1.5px solid var(--color-primary);
+}
+
+.text-teal {
+  color: var(--color-success);
+}
+
+.text-error {
+  color: var(--color-error);
+}
+
+.text-purple {
+  color: var(--color-primary);
+}
+
+.reserve-card {
+  margin-top: 1.5rem;
+}
+
+.reserve-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

@@ -1,0 +1,117 @@
+import { ReportsService } from '../services/reports.service';
+export declare class ReportsController {
+    private readonly reportsService;
+    constructor(reportsService: ReportsService);
+    getReinsuranceStatement(id: number, stateCode: string): Promise<({
+        label: string;
+        value: number;
+        isBold: boolean;
+        borderClass?: undefined;
+        isHeader?: undefined;
+        isRatio?: undefined;
+    } | {
+        label: string;
+        value: number;
+        isBold?: undefined;
+        borderClass?: undefined;
+        isHeader?: undefined;
+        isRatio?: undefined;
+    } | {
+        label: string;
+        value: number;
+        isBold: boolean;
+        borderClass: string;
+        isHeader?: undefined;
+        isRatio?: undefined;
+    } | {
+        label: string;
+        isHeader: boolean;
+        value?: undefined;
+        isBold?: undefined;
+        borderClass?: undefined;
+        isRatio?: undefined;
+    } | {
+        label: string;
+        value: number;
+        isRatio: boolean;
+        isBold?: undefined;
+        borderClass?: undefined;
+        isHeader?: undefined;
+    } | {
+        label: string;
+        value: number;
+        isRatio: boolean;
+        isBold: boolean;
+        borderClass: string;
+        isHeader?: undefined;
+    } | {
+        label: string;
+        value: number;
+        borderClass: string;
+        isBold?: undefined;
+        isHeader?: undefined;
+        isRatio?: undefined;
+    })[]>;
+    getCashSettlementCalculations(id: number): Promise<{
+        pw: number;
+        pfw: number;
+        pw_tot: number;
+        pc: number;
+        pfc: number;
+        pc_tot: number;
+        reins_comm: number;
+        reins_pf: number;
+        reins_comm_tot: number;
+        lp: number;
+        laep: number;
+        ae_paid: number;
+        losses_tot: number;
+        reins_losses_tot: number;
+        sub_total: number;
+        ssic_cf: number;
+        ssic_bb: number;
+        ssic_xol: number;
+        ssic_taxes_tot: number;
+        reins_bal: number;
+        ssic_bal: number;
+        ending_bal: number;
+        uep: number;
+        lu: number;
+        laeu: number;
+        aeu: number;
+        reins_pw: number;
+        reins_pfw: number;
+        reins_pw_tot: number;
+        reins_pc: number;
+        reins_pc_tot: number;
+        reins_lp: number;
+        reins_laep: number;
+        reins_ae_paid: number;
+        ssic_pw: number;
+        ssic_pfw: number;
+        ssic_pw_tot: number;
+        ssic_pc: number;
+        ssic_pfc: number;
+        ssic_pc_tot: number;
+        ssic_lp: number;
+        ssic_laep: number;
+        ssic_ae_paid: number;
+        ssic_losses_tot: number;
+        ssic_comm: number;
+        ssic_pf: number;
+        ssic_comm_tot: number;
+        total_comm: number;
+        total_pf: number;
+        total_comm_tot: number;
+        total_sub_total: number;
+        ssic_sub_total: number;
+        reins_uep: number;
+        reins_lu: number;
+        reins_laeu: number;
+        reins_aeu: number;
+        ssic_uep: number;
+        ssic_lu: number;
+        ssic_laeu: number;
+        ssic_aeu: number;
+    }>;
+}

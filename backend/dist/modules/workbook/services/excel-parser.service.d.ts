@@ -1,0 +1,30 @@
+import { Repository } from 'typeorm';
+import { Workbook } from '../entities/workbook.entity';
+import { StateExhibit } from '../entities/state-exhibit.entity';
+import { CashSettlement } from '../entities/cash-settlement.entity';
+export declare class ExcelParserService {
+    private readonly workbookRepo;
+    private readonly stateExhibitRepo;
+    private readonly cashSettlementRepo;
+    constructor(workbookRepo: Repository<Workbook>, stateExhibitRepo: Repository<StateExhibit>, cashSettlementRepo: Repository<CashSettlement>);
+    parseWorkbook(fileBuffer: Buffer, filename: string, forceOverwrite?: boolean): Promise<any>;
+    private parseStarlightWorkbook;
+    private parseFUTWorkbook;
+    recalculateTotalExhibit(workbookId: number): Promise<void>;
+    private findRowIndexByLabel;
+    private findRowIndexByExactLabel;
+    private findHeaderRowAndMonths;
+    private getNumericValue;
+    private getFUTReportDate;
+    private parseDateValue;
+    private formatMonthKey;
+    private formatMonthLabel;
+    private parseDateToMonthKey;
+    private validateSequentialMonth;
+    private getNextMonthKey;
+    private getPrevMonthKey;
+    generateITDWorkbookFromStarlight(fileBuffer: Buffer): Promise<Buffer>;
+    private createITDStateSheet;
+    private getDefaultMappings;
+    private getDefaultRates;
+}
