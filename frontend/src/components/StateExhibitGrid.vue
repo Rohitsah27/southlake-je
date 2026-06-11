@@ -48,58 +48,6 @@
       </table>
     </div>
   </div>
-
-  <!-- Reserve Fields Card -->
-  <div class="card-panel reserve-card">
-    <h3 class="reserve-title">Reserve Fields</h3>
-    <div class="table-container">
-      <table class="excel-table">
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th>19.3 Comm'l Auto<br><span class="col-sub">No-Fault</span></th>
-            <th>19.4 Other Comm'l Auto Liab<br><span class="col-sub">Auto Liab</span></th>
-            <th>21.2 Comm'l Auto Phys Damage<br><span class="col-sub">Phys Damage</span></th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="field in RESERVE_FIELDS" :key="field.id">
-            <td class="row-label">{{ field.label }}</td>
-            
-            <!-- Column Inputs -->
-            <td v-for="colIdx in [0, 1, 2]" :key="colIdx" class="num-col" :class="{ 'yellow-cell': activeTab !== 'TOTAL' }">
-              <input
-                v-if="activeTab !== 'TOTAL'"
-                type="text"
-                class="cell-input"
-                :value="formatInputVal(getCellValue(activeTab, field.id, colIdx))"
-                @focus="onCellFocus($event, getCellValue(activeTab, field.id, colIdx))"
-                @blur="onCellBlur($event, activeTab, field.id, colIdx)"
-              />
-              <span v-else class="cell-span">{{ formatDisplayVal(getCellValue('TOTAL', field.id, colIdx)) }}</span>
-            </td>
-  
-            <!-- Row Total -->
-            <td class="total-col">
-              {{ formatDisplayVal(getRowTotal(activeTab, field.id)) }}
-            </td>
-          </tr>
-  
-          <!-- Reserve Grand Total Row -->
-          <tr class="grand-total-row">
-            <td>RESERVE TOTAL</td>
-            <td v-for="colIdx in [0, 1, 2]" :key="colIdx" class="num-col">
-              {{ formatDisplayVal(getColReserveGrandTotal(activeTab, colIdx)) }}
-            </td>
-            <td class="total-col">
-              {{ formatDisplayVal(getWorkbookReserveGrandTotal(activeTab)) }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 </template>
 
 <script lang="ts">

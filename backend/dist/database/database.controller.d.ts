@@ -15,7 +15,7 @@ export declare class DatabaseController {
         seeded: boolean;
         message: string;
     }>;
-    getSeederFiles(): any[];
+    getSeederFiles(): Promise<any[]>;
     updateSeederFile(stateCode: string, data: any): Promise<{
         success: boolean;
         message: string;

@@ -173,22 +173,24 @@ export default defineComponent({
   align-items: center;
   gap: 0.6rem;
   padding: 0.7rem 1.4rem;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  border: none;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
   border-radius: 8px;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.05);
   transition: all 0.2s ease;
   width: fit-content;
 }
 
 .upload-btn:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
 }
 
 .upload-btn:active {
@@ -210,8 +212,8 @@ export default defineComponent({
   align-items: center;
   gap: 0.5rem;
   padding: 0.7rem 1rem;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.15);
   border-radius: 8px;
   font-size: 0.88rem;
   color: var(--color-error);
@@ -251,13 +253,17 @@ export default defineComponent({
 }
 
 .generate-itd-btn {
-  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border: 1px solid #bfdbfe !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.05) !important;
 }
 
 .generate-itd-btn:hover {
+  background: #dbeafe !important;
+  border-color: #93c5fd !important;
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08) !important;
 }
 
 .generate-itd-btn:active {

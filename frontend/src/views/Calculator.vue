@@ -16,57 +16,56 @@
       <p>Please upload an Excel workbook (FUT monthly exhibit or Starlight report summary) to begin.</p>
     </div>
 
-    <!-- Active Workbook Area -->
-    <div v-else-if="activeWorkbook" class="workspace-area">
-      <!-- Tabs Navigation -->
-      <div class="tab-bar">
-        <div class="tabs-list">
-          <button
-            v-for="exhibit in activeWorkbook.stateExhibits"
-            :key="exhibit.id"
-            class="tab-btn"
-            :class="{ active: activeTab === exhibit.stateCode }"
-            @click="activeTab = exhibit.stateCode"
-          >
-            {{ exhibit.stateCode === 'TOTAL' ? '📊 MTHLY-TOTAL' : exhibit.stateCode }}
-          </button>
-          <button
-            class="tab-btn total-tab"
-            :class="{ active: activeTab === 'CashSettlement' }"
-            @click="activeTab = 'CashSettlement'"
-          >
-            📄 Cash Settlement
+    <div v-else-if="activeWorkbook" class="workspace-layout">
+      <!-- View/State Filter Panel -->
+      <div class="card-panel filter-panel">
+        <div class="filter-row">
+          <div class="filter-select-group">
+            <label>Select State / View</label>
+            <select v-model="activeTab" class="filter-select">
+              <option value="TOTAL">📊 MTHLY-TOTAL</option>
+              <option
+                v-for="exhibit in (activeWorkbook.stateExhibits || []).filter(e => e.stateCode !== 'TOTAL')"
+                :key="exhibit.id"
+                :value="exhibit.stateCode"
+              >
+                🗺️ State {{ exhibit.stateCode }}
+              </option>
+              <option value="CashSettlement">📄 Cash Settlement</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary btn-sm" @click="exportCSV">
+            📥 Export CSV
           </button>
         </div>
-
-        <button class="btn btn-secondary btn-sm" @click="exportCSV">
-          📥 Export to CSV
-        </button>
       </div>
 
-      <!-- State Exhibit Grid -->
-      <StateExhibitGrid
-        v-if="activeTab !== 'CashSettlement'"
-        :active-tab="activeTab"
-        :active-workbook="activeWorkbook"
-        @cell-updated="selectWorkbook"
-      />
-
-      <!-- Cash Settlement View -->
-      <div v-else class="cash-settlement-layout">
-        <!-- Sidebar Rates Panel -->
-        <RatesSidebar
-          v-model="ratesForm"
-          @save="handleSaveRates"
-        />
-
-        <!-- Cash Settlement Statement -->
-        <CashSettlementSheet
-          :cs-sums="csSums"
+      <!-- Main Workspace Content -->
+      <main class="main-content">
+        <!-- State Exhibit Grid -->
+        <StateExhibitGrid
+          v-if="activeTab !== 'CashSettlement'"
+          :active-tab="activeTab"
           :active-workbook="activeWorkbook"
-          @ledger-blur="handleLedgerBlur"
+          @cell-updated="selectWorkbook"
         />
-      </div>
+
+        <!-- Cash Settlement View -->
+        <div v-else class="cash-settlement-layout">
+          <!-- Sidebar Rates Panel -->
+          <RatesSidebar
+            v-model="ratesForm"
+            @save="handleSaveRates"
+          />
+
+          <!-- Cash Settlement Statement -->
+          <CashSettlementSheet
+            :cs-sums="csSums"
+            :active-workbook="activeWorkbook"
+            @ledger-blur="handleLedgerBlur"
+          />
+        </div>
+      </main>
     </div>
   </div>
 </template>
@@ -243,4 +242,61 @@ export default defineComponent({
 });
 </script>
 
+<style scoped>
+.workspace-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
 
+.filter-panel {
+  padding: 1rem 1.25rem;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-select-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.filter-select-group label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.filter-select {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.88rem;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: var(--bg-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  min-width: 240px;
+  flex: 1;
+  outline: none;
+  transition: var(--transition-smooth);
+}
+
+.filter-select:focus {
+  border-color: var(--color-primary);
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+</style>

@@ -3,7 +3,7 @@
     <!-- Auto-Detect Settings Panel -->
     <div class="card-panel settings-panel">
       <h2>📂 Auto-Detected Reinsurance Scope</h2>
-      <p class="subtitle">Select an uploaded workbook, month, and state to link prior reserves and load ceding calculations.</p>
+      <p class="subtitle">Select an uploaded workbook and month to link prior reserves and load ceding calculations.</p>
 
       <div class="selection-grid">
         <div class="select-group">
@@ -21,72 +21,65 @@
         </div>
 
         <div class="select-group">
-          <label>Select State Code</label>
+          <label>Select State</label>
           <select v-model="selectedState" @change="onStateChange">
             <option v-for="st in states" :key="st" :value="st">{{ st }}</option>
           </select>
         </div>
       </div>
 
-      <!-- Detection Status Message Box -->
-      <div v-if="statusMessage" class="status-box" :class="statusClass">
-        <div class="status-title">{{ statusTitle }}</div>
-        <div class="status-details">{{ statusMessage }}</div>
-        <div class="status-actions" style="margin-top: 0.75rem;">
-          <button class="btn btn-primary btn-sm" @click="applyAutoDetectedValues">
-            Apply Auto-Detected Values
-          </button>
-        </div>
-      </div>
     </div>
 
-    <!-- Required Parameters Card -->
-    <RequiredParamsForm
-      v-if="activeWb"
-      v-model="paramsForm"
-      :lae-label="prevLaeIbnrLabel"
-      @change="saveParams"
-    />
+    <!-- Active Workbook Workspace Layout -->
+    <div v-if="activeWb" class="workspace-layout">
+      <!-- Main content, forms & tables -->
+      <main class="main-content">
+        <!-- Required Parameters Card -->
+        <RequiredParamsForm
+          v-model="paramsForm"
+          :lae-label="prevLaeIbnrLabel"
+          @change="saveParams"
+        />
 
-    <!-- Actuarial Rates & Commissions (%) Card -->
-    <ActuarialRatesForm
-      v-if="activeWb"
-      v-model="ratesForm"
-      @change="saveRates"
-    />
+        <!-- Actuarial Rates & Commissions (%) Card -->
+        <ActuarialRatesForm
+          v-model="ratesForm"
+          @change="saveRates"
+        />
 
-    <!-- GL Account Mappings Settings Card -->
-    <MappingSettingsForm
-      v-if="activeWb"
-      v-model="mappingsForm"
-      @change="saveMappings"
-    />
+        <!-- GL Account Mappings Settings Card -->
+        <MappingSettingsForm
+          v-model="mappingsForm"
+          @change="saveMappings"
+        />
 
-    <!-- Output Views Container -->
-    <div class="workspace-tabs">
-      <div class="tab-controls">
-        <button class="tab-btn" :class="{ active: viewTab === 'statement' }" @click="viewTab = 'statement'">
-          📊 Reinsurance Statement
-        </button>
-        <button class="tab-btn" :class="{ active: viewTab === 'glje' }" @click="viewTab = 'glje'">
-          💼 GL Journal Entry Mapping
-        </button>
-        <button v-if="viewTab === 'glje'" class="btn btn-success btn-sm export-btn" @click="exportGLJECSV">
-          📥 Export GL Mappings
-        </button>
-      </div>
+        <!-- Output Views Container -->
+        <div class="workspace-tabs">
+          <div class="tab-controls">
+            <button class="tab-btn" :class="{ active: viewTab === 'statement' }" @click="viewTab = 'statement'">
+              📊 Reinsurance Statement
+            </button>
+            <button class="tab-btn" :class="{ active: viewTab === 'glje' }" @click="viewTab = 'glje'">
+              💼 GL Journal Entry Mapping
+            </button>
+            <button v-if="viewTab === 'glje'" class="btn btn-success btn-sm export-btn" @click="exportGLJECSV">
+              📥 Export GL Mappings
+            </button>
+          </div>
 
-      <!-- Reinsurance Statement View -->
-      <ReinsuranceStatementTable
-        v-if="viewTab === 'statement'"
-        :statement-rows="statementRows"
-      />
+          <!-- Reinsurance Statement View -->
+          <ReinsuranceStatementTable
+            v-if="viewTab === 'statement'"
+            :statement-rows="statementRows"
+          />
 
-      <!-- GL Journal Entry View -->
-      <GLJournalEntriesTable
-        v-else
-        :glje-rows="gljeRows"
-      />
+          <!-- GL Journal Entry View -->
+          <GLJournalEntriesTable
+            v-else
+            :glje-rows="gljeRows"
+          />
+        </div>
+      </main>
     </div>
   </div>
 </template>
@@ -125,9 +118,6 @@ export default defineComponent({
       activeWb,
       months,
       states,
-      statusMessage,
-      statusClass,
-      statusTitle,
       statementRows,
       gljeRows,
       onProgramChange,
@@ -136,7 +126,6 @@ export default defineComponent({
       saveMappings,
       saveParams,
       saveRates,
-      applyAutoDetectedValues,
       prevLaeIbnrLabel,
     } = useJournalEntries(workbooksList);
 
@@ -206,9 +195,6 @@ export default defineComponent({
       programs,
       months,
       states,
-      statusMessage,
-      statusClass,
-      statusTitle,
       statementRows,
       gljeRows,
       onProgramChange,
@@ -217,13 +203,26 @@ export default defineComponent({
       saveMappings,
       saveParams,
       saveRates,
-      applyAutoDetectedValues,
       exportGLJECSV,
       prevLaeIbnrLabel,
     };
   },
 });
 </script>
+
+<style scoped>
+.workspace-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+</style>
 
 
 

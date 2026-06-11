@@ -17,11 +17,10 @@ export declare class ItdSeederService {
         message: string;
     }>;
     seedItdData(): Promise<any[]>;
-    getSeederFiles(): any[];
+    getSeederFiles(): Promise<any[]>;
     updateSeederFile(stateCode: string, data: any): Promise<{
         success: boolean;
         message: string;
     }>;
-    private recalculateTotalSeederFile;
     private recalculateTotalExhibitInDb;
 }

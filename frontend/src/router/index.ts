@@ -15,7 +15,7 @@ const routes = [
     component: JournalEntries,
   },
   {
-    path: '/seeder-editor',
+    path: '/itd-editor',
     name: 'SeederEditor',
     component: SeederEditor,
   },

@@ -35,7 +35,10 @@ export class ItdSeederService {
 
   async checkItdSeeded(): Promise<{ seeded: boolean; message: string }> {
     const itdWorkbook = await this.workbookRepo.findOne({
-      where: { program: 'DPR APD', source: 'ITD' },
+      where: [
+        { program: 'DPR APD', source: 'ITD' },
+        { program: 'APD Local', source: 'ITD' },
+      ],
     });
     return {
       seeded: !!itdWorkbook,
@@ -49,16 +52,7 @@ export class ItdSeederService {
     // Resolve states folder path
     const statesDir = path.join(process.cwd(), 'src/database/seeds/states');
     const workspaceDir = 'C:/Users/ASUS/Desktop/Treaty - 1/itd_states_seeder_data';
-    
-    // Recalculate TOTAL.json on disk first so it has correct summed values
-    this.recalculateTotalSeederFile(statesDir, workspaceDir);
 
-    // 1. Remove only existing ITD workbooks for this program to avoid conflicts
-    const existingItd = await this.workbookRepo.find({ where: { program: 'DPR APD', source: 'ITD' } });
-    if (existingItd.length > 0) {
-      this.logger.log(`Removing ${existingItd.length} existing ITD workbook(s)...`);
-      await this.workbookRepo.remove(existingItd);
-    }
     if (!fs.existsSync(statesDir)) {
       throw new Error(`Seeder states directory not found at ${statesDir}. Please run extraction first.`);
     }
@@ -69,176 +63,232 @@ export class ItdSeederService {
       throw new Error(`No state JSON files found under ${statesDir}.`);
     }
 
-    // 3. Create single Workbook entity for December 2025 representing the ITD values
-    const program = 'DPR APD';
-    const monthKey = '2025-12';
-    const monthLabel = 'December 2025';
-    const source = 'ITD';
-
-    const rates = {
-      qs: 100,
-      cf: 5,
-      comm: 29.0,
-      bb: 0.40,
-      ulae: 7.0,
-      xol: 2.0,
-      lr: 0.0,
-      lossPick: 51.8,
-      laeDcc: 0.0,
-      laeAoe: 13.4,
-      boardsCharge: 0.40,
-      lossRatioCap: 2.0
-    };
-
-    const workbook = this.workbookRepo.create({
-      program,
-      monthKey,
-      monthLabel,
-      source,
-      rates,
-      mga: '2002',
-      lob: '000212',
-      lineDescSuffix: 'FUT Starlight T2 APD DRP',
-      cc: '00',
-      comp: '100',
-      ext: '0000',
-      sub: '',
-    });
-
-    const savedWb = await this.workbookRepo.save(workbook);
-    this.logger.log(`Created ITD workbook with ID: ${savedWb.id}`);
-
-    const exhibits = [];
-    for (const file of files) {
-      const filePath = path.join(statesDir, file);
-      const exJson = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      this.logger.log(`Reading ${file}: stateCode=${exJson.stateCode}, pw=${JSON.stringify(exJson.pw)}`);
-
-      const safeNumArr = (field: string): number[] => {
-        const val = exJson[field];
-        if (Array.isArray(val) && val.length === 3) {
-          return val.map(v => Number(v) || 0);
+    const programsConfig = [
+      {
+        program: 'DPR APD',
+        mga: '2002',
+        lob: '000212',
+        lineDescSuffix: 'FUT Starlight T2 APD DRP',
+        cc: '00',
+        rates: {
+          qs: 100,
+          cf: 5,
+          comm: 29.0,
+          bb: 0.40,
+          ulae: 7.0,
+          xol: 2.0,
+          lr: 2.0,
+          lossPick: 61.1,
+          laeDcc: 0.0,
+          laeAoe: 3.4,
+          boardsCharge: 0.40,
+          lossRatioCap: 2.0
         }
-        return [0, 0, 0];
-      };
+      },
+      {
+        program: 'APD Local',
+        mga: '1202',
+        lob: '000212',
+        lineDescSuffix: 'FUT Starlight T2 APD Local',
+        cc: '000',
+        rates: {
+          qs: 100,
+          cf: 5,
+          comm: 29.0,
+          bb: 0.40,
+          ulae: 7.0,
+          xol: 2.0,
+          lr: 2.0,
+          lossPick: 61.1,
+          laeDcc: 0.0,
+          laeAoe: 3.4,
+          boardsCharge: 0.40,
+          lossRatioCap: 2.0
+        }
+      }
+    ];
 
-      const ex = this.stateExhibitRepo.create({
-        workbookId: savedWb.id,
-        stateCode: exJson.stateCode,
-        pw: safeNumArr('pw'),
-        pfw: safeNumArr('pfw'),
-        pc: safeNumArr('pc'),
-        pfc: safeNumArr('pfc'),
-        tax: safeNumArr('tax'),
-        lp: safeNumArr('lp'),
-        laep: safeNumArr('laep'),
-        ae_paid: safeNumArr('ae_paid'),
-        pe: safeNumArr('pe'),
-        pfe: safeNumArr('pfe'),
-        uep: safeNumArr('uep'),
-        lu: safeNumArr('lu'),
-        laeu: safeNumArr('laeu'),
-        aeu: safeNumArr('aeu'),
-        loss_reserves: safeNumArr('loss_reserves'),
-        loss_ibnr: safeNumArr('loss_ibnr'),
-        lae_reserves_dcc: safeNumArr('lae_reserves_dcc'),
-        lae_ibnr_dcc: safeNumArr('lae_ibnr_dcc'),
-        lae_reserves_aoe: safeNumArr('lae_reserves_aoe'),
-        lae_ibnr_aoe: safeNumArr('lae_ibnr_aoe'),
-        ulae_ibnr: safeNumArr('ulae_ibnr'),
+    const results = [];
+
+    for (const config of programsConfig) {
+      // 1. Remove only existing ITD workbooks for this program to avoid conflicts
+      const existingItd = await this.workbookRepo.find({ where: { program: config.program, source: 'ITD' } });
+      if (existingItd.length > 0) {
+        this.logger.log(`Removing ${existingItd.length} existing ITD workbook(s) for ${config.program}...`);
+        await this.workbookRepo.remove(existingItd);
+      }
+
+      // 2. Create single Workbook entity for December 2025 representing the ITD values
+      const workbook = this.workbookRepo.create({
+        program: config.program,
+        monthKey: '2025-12',
+        monthLabel: 'December 2025',
+        source: 'ITD',
+        rates: config.rates,
+        mga: config.mga,
+        lob: config.lob,
+        lineDescSuffix: config.lineDescSuffix,
+        cc: config.cc,
+        comp: '100',
+        ext: '0000',
+        sub: '',
       });
 
-      exhibits.push(ex);
-    }
+      const savedWb = await this.workbookRepo.save(workbook);
+      this.logger.log(`Created ITD workbook for ${config.program} with ID: ${savedWb.id}`);
 
-    this.logger.log(`Saving ${exhibits.length} exhibits to database...`);
-    const savedExhibits = await this.stateExhibitRepo.save(exhibits);
-    this.logger.log(`Successfully saved ${savedExhibits.length} exhibits`);
+      const exhibits = [];
+      for (const file of files) {
+        const filePath = path.join(statesDir, file);
+        const exJson = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-    // Create Cash Settlement
-    const cs = this.cashSettlementRepo.create({
-      workbookId: savedWb.id,
-      begBal: 0,
-      amtPaid: 0,
-    });
-    await this.cashSettlementRepo.save(cs);
+        const safeNumArr = (field: string): number[] => {
+          const val = exJson[field];
+          if (Array.isArray(val) && val.length === 3) {
+            return val.map(v => Number(v) || 0);
+          }
+          return [0, 0, 0];
+        };
 
-    // Verify data by re-fetching
-    const verifyWb = await this.workbookRepo.findOne({
-      where: { id: savedWb.id },
-      relations: { stateExhibits: true },
-    });
-    this.logger.log(`Verification: ITD workbook has ${verifyWb?.stateExhibits?.length || 0} exhibits`);
-    if (verifyWb?.stateExhibits && verifyWb.stateExhibits.length > 0) {
-      const totalEx = verifyWb.stateExhibits.find(e => e.stateCode === 'TOTAL');
-      if (totalEx) {
-        this.logger.log(`TOTAL exhibit - pw: ${JSON.stringify(totalEx.pw)}, uep: ${JSON.stringify(totalEx.uep)}, lu: ${JSON.stringify(totalEx.lu)}`);
+        const ex = this.stateExhibitRepo.create({
+          workbookId: savedWb.id,
+          stateCode: exJson.stateCode,
+          pw: safeNumArr('pw'),
+          pfw: safeNumArr('pfw'),
+          pc: safeNumArr('pc'),
+          pfc: safeNumArr('pfc'),
+          tax: safeNumArr('tax'),
+          lp: safeNumArr('lp'),
+          laep: safeNumArr('laep'),
+          ae_paid: safeNumArr('ae_paid'),
+          pe: safeNumArr('pe'),
+          pfe: safeNumArr('pfe'),
+          uep: safeNumArr('uep'),
+          lu: safeNumArr('lu'),
+          laeu: safeNumArr('laeu'),
+          aeu: safeNumArr('aeu'),
+          loss_reserves: safeNumArr('loss_reserves'),
+          loss_ibnr: safeNumArr('loss_ibnr'),
+          lae_reserves_dcc: safeNumArr('lae_reserves_dcc'),
+          lae_ibnr_dcc: safeNumArr('lae_ibnr_dcc'),
+          lae_reserves_aoe: safeNumArr('lae_reserves_aoe'),
+          lae_ibnr_aoe: safeNumArr('lae_ibnr_aoe'),
+          ulae_ibnr: safeNumArr('ulae_ibnr'),
+        });
+
+        exhibits.push(ex);
       }
+
+      this.logger.log(`Saving ${exhibits.length} exhibits to database...`);
+      const savedExhibits = await this.stateExhibitRepo.save(exhibits);
+      this.logger.log(`Successfully saved ${savedExhibits.length} exhibits`);
+
+      // Create Cash Settlement
+      const cs = this.cashSettlementRepo.create({
+        workbookId: savedWb.id,
+        begBal: 0,
+        amtPaid: 0,
+      });
+      await this.cashSettlementRepo.save(cs);
+
+      // Verify data by re-fetching
+      const verifyWb = await this.workbookRepo.findOne({
+        where: { id: savedWb.id },
+        relations: { stateExhibits: true },
+      });
+      this.logger.log(`Verification: ITD workbook for ${config.program} has ${verifyWb?.stateExhibits?.length || 0} exhibits`);
+
+      results.push({
+        file: `${config.program} - 2025-12`,
+        success: true,
+        message: `Successfully seeded ITD workbook with ${savedExhibits.length} separate state JSON files.`
+      });
     }
 
-    return [{
-      file: `${program} - ${monthKey}`,
-      success: true,
-      message: `Successfully seeded ITD workbook with ${savedExhibits.length} separate state JSON files.`
-    }];
+    return results;
   }
 
-  getSeederFiles(): any[] {
-    const statesDir = path.join(process.cwd(), 'src/database/seeds/states');
-    if (!fs.existsSync(statesDir)) {
+  async getSeederFiles(): Promise<any[]> {
+    // Try to find the ITD workbook in the database.
+    // We prefer 'APD Local' first, then fallback to 'DPR APD' or any workbook with source 'ITD'.
+    let itdWorkbook = await this.workbookRepo.findOne({
+      where: { program: 'APD Local', source: 'ITD' },
+      relations: { stateExhibits: true },
+    });
+
+    if (!itdWorkbook) {
+      itdWorkbook = await this.workbookRepo.findOne({
+        where: { source: 'ITD' },
+        relations: { stateExhibits: true },
+      });
+    }
+
+    if (!itdWorkbook || !itdWorkbook.stateExhibits || itdWorkbook.stateExhibits.length === 0) {
+      this.logger.log('No database ITD workbook found.');
       return [];
     }
-    const files = fs.readdirSync(statesDir).filter(f => f.endsWith('.json'));
-    const results = [];
-    for (const file of files) {
-      const stateCode = file.replace('.json', '');
-      const filePath = path.join(statesDir, file);
-      try {
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        results.push({ stateCode, data });
-      } catch (e) {
-        // ignore malformed files
-      }
-    }
+
+    this.logger.log(`Loading ITD editor state data from database workbook ID: ${itdWorkbook.id}`);
+    
+    // Convert database exhibits to the expected seeder format
+    const results = itdWorkbook.stateExhibits.map((ex) => {
+      const data: any = {
+        stateCode: ex.stateCode,
+        pw: ex.pw || [0, 0, 0],
+        pfw: ex.pfw || [0, 0, 0],
+        pc: ex.pc || [0, 0, 0],
+        pfc: ex.pfc || [0, 0, 0],
+        tax: ex.tax || [0, 0, 0],
+        lp: ex.lp || [0, 0, 0],
+        laep: ex.laep || [0, 0, 0],
+        ae_paid: ex.ae_paid || [0, 0, 0],
+        pe: ex.pe || [0, 0, 0],
+        pfe: ex.pfe || [0, 0, 0],
+        uep: ex.uep || [0, 0, 0],
+        lu: ex.lu || [0, 0, 0],
+        laeu: ex.laeu || [0, 0, 0],
+        aeu: ex.aeu || [0, 0, 0],
+        loss_reserves: ex.loss_reserves || [0, 0, 0],
+        loss_ibnr: ex.loss_ibnr || [0, 0, 0],
+        lae_reserves_dcc: ex.lae_reserves_dcc || [0, 0, 0],
+        lae_ibnr_dcc: ex.lae_ibnr_dcc || [0, 0, 0],
+        lae_reserves_aoe: ex.lae_reserves_aoe || [0, 0, 0],
+        lae_ibnr_aoe: ex.lae_ibnr_aoe || [0, 0, 0],
+        ulae_ibnr: ex.ulae_ibnr || [0, 0, 0],
+      };
+      return {
+        stateCode: ex.stateCode,
+        data,
+      };
+    });
+
     // Sort states so TOTAL is at the end, others alphabetical
     results.sort((a, b) => {
       if (a.stateCode === 'TOTAL') return 1;
       if (b.stateCode === 'TOTAL') return -1;
       return a.stateCode.localeCompare(b.stateCode);
     });
+
     return results;
   }
 
   async updateSeederFile(stateCode: string, data: any): Promise<{ success: boolean; message: string }> {
     const cleanState = stateCode.toUpperCase().trim();
-    
-    // Save to backend seeds folder
-    const backendDir = path.join(process.cwd(), 'src/database/seeds/states');
-    const backendPath = path.join(backendDir, `${cleanState}.json`);
-    if (!fs.existsSync(backendDir)) {
-      fs.mkdirSync(backendDir, { recursive: true });
-    }
-    fs.writeFileSync(backendPath, JSON.stringify(data, null, 2));
-
-    // Save to workspace root folder for visibility
-    const workspaceDir = 'C:/Users/ASUS/Desktop/Treaty - 1/itd_states_seeder_data';
-    if (fs.existsSync(workspaceDir)) {
-      const workspacePath = path.join(workspaceDir, `${cleanState}.json`);
-      fs.writeFileSync(workspacePath, JSON.stringify(data, null, 2));
-    }
-
-    // Auto recalculate TOTAL if the updated state is not TOTAL itself
-    if (cleanState !== 'TOTAL') {
-      this.recalculateTotalSeederFile(backendDir, workspaceDir);
-    }
 
     // Update the ITD workbook in the database if it exists
-    const itdWorkbook = await this.workbookRepo.findOne({
-      where: { program: 'DPR APD', source: 'ITD' },
+    const itdWorkbooks = await this.workbookRepo.find({
+      where: { source: 'ITD' },
       relations: { stateExhibits: true },
     });
 
-    if (itdWorkbook) {
+    if (itdWorkbooks.length === 0) {
+      return {
+        success: false,
+        message: `No active ITD workbook found in the database. Please upload an ITD Excel workbook first.`,
+      };
+    }
+
+    for (const itdWorkbook of itdWorkbooks) {
       const fields = [
         'pw', 'pfw', 'pc', 'pfc', 'tax', 'lp', 'laep', 'ae_paid',
         'pe', 'pfe', 'uep', 'loss_reserves', 'loss_ibnr', 
@@ -274,57 +324,8 @@ export class ItdSeederService {
 
     return {
       success: true,
-      message: `Seeder file for state ${cleanState} updated successfully, and changes are now live in the database workbook.`,
+      message: `Database ITD workbook successfully updated for state ${cleanState}.`,
     };
-  }
-
-  private recalculateTotalSeederFile(backendDir: string, workspaceDir: string): void {
-    if (!fs.existsSync(backendDir)) return;
-    const files = fs.readdirSync(backendDir).filter(f => f.endsWith('.json') && f !== 'TOTAL.json');
-    
-    const fields = [
-      'pw', 'pfw', 'pc', 'pfc', 'tax', 'lp', 'laep', 'ae_paid',
-      'pe', 'pfe', 'uep', 'loss_reserves', 'loss_ibnr', 
-      'lae_reserves_dcc', 'lae_ibnr_dcc', 'lae_reserves_aoe', 'lae_ibnr_aoe', 'ulae_ibnr',
-      'lu', 'laeu', 'aeu'
-    ];
-
-    const totalData: any = {
-      stateCode: 'TOTAL'
-    };
-
-    // Initialize all field arrays to [0, 0, 0]
-    fields.forEach(f => {
-      totalData[f] = [0, 0, 0];
-    });
-
-    for (const file of files) {
-      try {
-        const filePath = path.join(backendDir, file);
-        const stateJson = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        
-        fields.forEach(f => {
-          const stateArr = stateJson[f] || [0, 0, 0];
-          for (let i = 0; i < 3; i++) {
-            totalData[f][i] += Number(stateArr[i] || 0);
-          }
-          // Round to 2 decimal places to avoid floating point errors
-          for (let i = 0; i < 3; i++) {
-            totalData[f][i] = Number(totalData[f][i].toFixed(2));
-          }
-        });
-      } catch (e) {
-        this.logger.error(`Error reading ${file} for total recalculation:`, e);
-      }
-    }
-
-    // Write TOTAL.json to backend
-    fs.writeFileSync(path.join(backendDir, 'TOTAL.json'), JSON.stringify(totalData, null, 2));
-
-    // Write TOTAL.json to workspace root
-    if (fs.existsSync(workspaceDir)) {
-      fs.writeFileSync(path.join(workspaceDir, 'TOTAL.json'), JSON.stringify(totalData, null, 2));
-    }
   }
 
   private async recalculateTotalExhibitInDb(workbookId: number): Promise<void> {

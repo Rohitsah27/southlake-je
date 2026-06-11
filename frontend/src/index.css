@@ -25,13 +25,13 @@
   
   --transition-smooth: all 0.2s ease-in-out;
   --glass-backdrop: blur(12px);
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-bg: #ffffff;
+  --glass-border: #e2e8f0;
 
   --yellow-cell-bg: #fffdf0;
   --yellow-cell-focus: #fefcbf;
   
-  --grand-total-bg: #e2e8f0;
+  --grand-total-bg: #f1f5f9;
 }
 
 * {
@@ -43,8 +43,8 @@
 body {
   background-color: var(--bg-base);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.04) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.04) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.02) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.02) 0px, transparent 50%);
   color: var(--color-text);
   font-family: var(--font-sans);
   min-height: 100vh;
@@ -62,14 +62,13 @@ body {
   gap: 1.5rem;
 }
 
-/* Glassmorphic Cards */
+/* Light Card Panels */
 .card-panel {
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
   transition: var(--transition-smooth);
 }
 
@@ -108,14 +107,17 @@ input:focus, select:focus {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary), #7c3aed);
-  color: white;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+  background-color: #f5f3ff;
+  color: var(--color-primary);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.05);
 }
 
 .btn-primary:hover {
+  background-color: #eeebff;
+  border-color: rgba(139, 92, 246, 0.3);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
 }
 
 .btn-secondary {
@@ -130,14 +132,17 @@ input:focus, select:focus {
 }
 
 .btn-success {
-  background: linear-gradient(135deg, var(--color-success), #059669);
-  color: white;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.05);
 }
 
 .btn-success:hover {
+  background-color: #d1fae5;
+  border-color: #6ee7b7;
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
 }
 
 .btn-danger {
