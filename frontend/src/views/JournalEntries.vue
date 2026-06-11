@@ -129,21 +129,29 @@ export default defineComponent({
       prevLaeIbnrLabel,
     } = useJournalEntries(workbooksList);
 
-    // Predefined default programs or auto-detected ones
+    const dbProgramsList = ref<any[]>([]);
+
+    // Auto-detected programs list (workbooks + custom database programs)
     const programs = computed(() => {
       const progs = new Set<string>();
       workbooksList.value.forEach(w => progs.add(w.program));
-      if (progs.size === 0) {
-        return ['Excess NX', 'Excess SAM', 'Excess HS', 'APD Local', 'APD Fleet', 'DPR APD'];
-      }
-      return Array.from(progs);
+      dbProgramsList.value.forEach(p => progs.add(p.name));
+      return Array.from(progs).sort();
     });
 
     const loadData = async () => {
       try {
         workbooksList.value = await api.getWorkbooks();
+        try {
+          dbProgramsList.value = await api.getPrograms();
+        } catch (e) {
+          console.error('[JournalEntries] Failed to fetch programs:', e);
+        }
         if (programs.value.length > 0) {
-          selectedProgram.value = programs.value[0];
+          // Keep current selection if valid, otherwise select the first one
+          if (!selectedProgram.value || !programs.value.includes(selectedProgram.value)) {
+            selectedProgram.value = programs.value[0];
+          }
           onProgramChange();
         }
       } catch (err) {

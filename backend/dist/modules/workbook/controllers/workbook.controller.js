@@ -28,6 +28,12 @@ let WorkbookController = class WorkbookController {
     async findAll() {
         return this.workbookService.findAll();
     }
+    async findPrograms() {
+        return this.workbookService.findPrograms();
+    }
+    async createProgram(name, rates) {
+        return this.workbookService.createProgram(name, rates);
+    }
     async findOne(id) {
         return this.workbookService.findOne(id);
     }
@@ -46,15 +52,16 @@ let WorkbookController = class WorkbookController {
     async updateCashSettlement(id, dto) {
         return this.workbookService.updateCashSettlement(id, dto);
     }
-    async uploadFile(file, overwrite) {
+    async uploadFile(file, overwrite, program) {
         const forceOverwrite = overwrite === 'true';
-        return this.workbookService.uploadWorkbook(file.buffer, file.originalname, forceOverwrite);
+        return this.workbookService.uploadWorkbook(file.buffer, file.originalname, forceOverwrite, program);
     }
-    async generateITDExcel(file, res) {
-        const buffer = await this.workbookService.generateITDExcel(file.buffer);
+    async generateITDExcel(file, program, res) {
+        const buffer = await this.workbookService.generateITDExcel(file.buffer, program);
+        const safeProgram = program ? program.replace(/\s+/g, '_') : 'Program';
         res.set({
             'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition': `attachment; filename=ITD_Seeder_${file.originalname}`,
+            'Content-Disposition': `attachment; filename=ITD_Seeder_${safeProgram}_${file.originalname}`,
             'Content-Length': buffer.length,
         });
         res.end(buffer);
@@ -67,6 +74,20 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], WorkbookController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('programs'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], WorkbookController.prototype, "findPrograms", null);
+__decorate([
+    (0, common_1.Post)('programs'),
+    __param(0, (0, common_1.Body)('name')),
+    __param(1, (0, common_1.Body)('rates')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], WorkbookController.prototype, "createProgram", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
@@ -120,17 +141,19 @@ __decorate([
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
     __param(0, (0, common_1.UploadedFile)()),
     __param(1, (0, common_1.Body)('overwrite')),
+    __param(2, (0, common_1.Body)('program')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, String, String]),
     __metadata("design:returntype", Promise)
 ], WorkbookController.prototype, "uploadFile", null);
 __decorate([
     (0, common_1.Post)('generate-itd'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
     __param(0, (0, common_1.UploadedFile)()),
-    __param(1, (0, common_1.Res)()),
+    __param(1, (0, common_1.Body)('program')),
+    __param(2, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], WorkbookController.prototype, "generateITDExcel", null);
 exports.WorkbookController = WorkbookController = __decorate([

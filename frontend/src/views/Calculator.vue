@@ -10,13 +10,13 @@
     />
 
     <!-- Empty State -->
-    <div v-if="workbooks.length === 0" class="card-panel empty-state">
+    <div v-if="!activeWorkbook" class="card-panel empty-state">
       <div class="empty-icon">📊</div>
-      <h2>No Reinsurance Workbooks Active</h2>
-      <p>Please upload an Excel workbook (FUT monthly exhibit or Starlight report summary) to begin.</p>
+      <h2>No Active Workbooks for this Program</h2>
+      <p>Please upload an Excel workbook (FUT monthly exhibit or Starlight report summary) or generate the ITD file for the selected program to begin.</p>
     </div>
 
-    <div v-else-if="activeWorkbook" class="workspace-layout">
+    <div v-else class="workspace-layout">
       <!-- View/State Filter Panel -->
       <div class="card-panel filter-panel">
         <div class="filter-row">

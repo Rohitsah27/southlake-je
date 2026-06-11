@@ -30,6 +30,19 @@ export class WorkbookController {
     return this.workbookService.findAll();
   }
 
+  @Get('programs')
+  async findPrograms() {
+    return this.workbookService.findPrograms();
+  }
+
+  @Post('programs')
+  async createProgram(
+    @Body('name') name: string,
+    @Body('rates') rates: any,
+  ) {
+    return this.workbookService.createProgram(name, rates);
+  }
+
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.workbookService.findOne(id);
@@ -79,21 +92,24 @@ export class WorkbookController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body('overwrite') overwrite?: string,
+    @Body('program') program?: string,
   ) {
     const forceOverwrite = overwrite === 'true';
-    return this.workbookService.uploadWorkbook(file.buffer, file.originalname, forceOverwrite);
+    return this.workbookService.uploadWorkbook(file.buffer, file.originalname, forceOverwrite, program);
   }
 
   @Post('generate-itd')
   @UseInterceptors(FileInterceptor('file'))
   async generateITDExcel(
     @UploadedFile() file: Express.Multer.File,
+    @Body('program') program: string,
     @Res() res: any,
   ) {
-    const buffer = await this.workbookService.generateITDExcel(file.buffer);
+    const buffer = await this.workbookService.generateITDExcel(file.buffer, program);
+    const safeProgram = program ? program.replace(/\s+/g, '_') : 'Program';
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename=ITD_Seeder_${file.originalname}`,
+      'Content-Disposition': `attachment; filename=ITD_Seeder_${safeProgram}_${file.originalname}`,
       'Content-Length': buffer.length,
     });
     res.end(buffer);

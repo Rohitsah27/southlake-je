@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Workbook } from '../entities/workbook.entity';
 import { StateExhibit } from '../entities/state-exhibit.entity';
 import { CashSettlement } from '../entities/cash-settlement.entity';
+import { Program } from '../entities/program.entity';
 import { UpdateExhibitDto } from '../dto/update-exhibit.dto';
 import { UpdateRatesDto } from '../dto/update-rates.dto';
 import { UpdateCashSettlementDto } from '../dto/update-cash-settlement.dto';
@@ -18,9 +19,25 @@ export class WorkbookService {
     private readonly stateExhibitRepo: Repository<StateExhibit>,
     @InjectRepository(CashSettlement)
     private readonly cashSettlementRepo: Repository<CashSettlement>,
+    @InjectRepository(Program)
+    private readonly programRepo: Repository<Program>,
 
     private readonly excelParserService: ExcelParserService,
   ) {}
+
+  async findPrograms(): Promise<Program[]> {
+    return this.programRepo.find({ order: { name: 'ASC' } });
+  }
+
+  async createProgram(name: string, rates: any): Promise<Program> {
+    const existing = await this.programRepo.findOne({ where: { name } });
+    if (existing) {
+      existing.rates = rates;
+      return this.programRepo.save(existing);
+    }
+    const program = this.programRepo.create({ name, rates });
+    return this.programRepo.save(program);
+  }
 
   async findAll(): Promise<Workbook[]> {
     return this.workbookRepo.find({
@@ -63,8 +80,8 @@ export class WorkbookService {
     await this.workbookRepo.remove(workbook);
   }
 
-  async uploadWorkbook(fileBuffer: Buffer, filename: string, forceOverwrite: boolean = false): Promise<any> {
-    const result = await this.excelParserService.parseWorkbook(fileBuffer, filename, forceOverwrite);
+  async uploadWorkbook(fileBuffer: Buffer, filename: string, forceOverwrite: boolean = false, program?: string): Promise<any> {
+    const result = await this.excelParserService.parseWorkbook(fileBuffer, filename, forceOverwrite, program);
     if (result && result.workbook && result.workbook.source === 'FUT') {
       await this.recalculateFUTReserves(result.workbook.id);
       result.workbook = await this.findOne(result.workbook.id);
@@ -72,7 +89,7 @@ export class WorkbookService {
     return result;
   }
 
-  async generateITDExcel(fileBuffer: Buffer): Promise<Buffer> {
+  async generateITDExcel(fileBuffer: Buffer, program?: string): Promise<Buffer> {
     return this.excelParserService.generateITDWorkbookFromStarlight(fileBuffer);
   }
 

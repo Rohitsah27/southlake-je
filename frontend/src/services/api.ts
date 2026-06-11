@@ -60,6 +60,22 @@ export const api = {
     return res.json();
   },
 
+  async getPrograms(): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/workbooks/programs`);
+    if (!res.ok) throw new Error('Failed to load programs');
+    return res.json();
+  },
+
+  async createProgram(name: string, rates: any): Promise<any> {
+    const res = await fetch(`${API_BASE}/workbooks/programs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, rates }),
+    });
+    if (!res.ok) throw new Error('Failed to create program');
+    return res.json();
+  },
+
   async getWorkbook(id: number): Promise<Workbook> {
     const res = await fetch(`${API_BASE}/workbooks/${id}`);
     if (!res.ok) throw new Error(`Failed to load workbook ${id}`);
@@ -73,11 +89,14 @@ export const api = {
     if (!res.ok) throw new Error(`Failed to delete workbook ${id}`);
   },
 
-  async uploadWorkbook(file: File, overwrite: boolean = false): Promise<any> {
+  async uploadWorkbook(file: File, overwrite: boolean = false, program?: string): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
     if (overwrite) {
       formData.append('overwrite', 'true');
+    }
+    if (program) {
+      formData.append('program', program);
     }
     const res = await fetch(`${API_BASE}/workbooks/upload`, {
       method: 'POST',
@@ -92,9 +111,12 @@ export const api = {
     return res.json();
   },
 
-  async generateITDExcel(file: File): Promise<Blob> {
+  async generateITDExcel(file: File, program?: string): Promise<Blob> {
     const formData = new FormData();
     formData.append('file', file);
+    if (program) {
+      formData.append('program', program);
+    }
     const res = await fetch(`${API_BASE}/workbooks/generate-itd`, {
       method: 'POST',
       body: formData,

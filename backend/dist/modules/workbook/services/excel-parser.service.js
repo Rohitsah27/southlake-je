@@ -52,28 +52,31 @@ const typeorm_2 = require("typeorm");
 const workbook_entity_1 = require("../entities/workbook.entity");
 const state_exhibit_entity_1 = require("../entities/state-exhibit.entity");
 const cash_settlement_entity_1 = require("../entities/cash-settlement.entity");
+const program_entity_1 = require("../entities/program.entity");
 const XLSX = __importStar(require("xlsx"));
 let ExcelParserService = class ExcelParserService {
     workbookRepo;
     stateExhibitRepo;
     cashSettlementRepo;
-    constructor(workbookRepo, stateExhibitRepo, cashSettlementRepo) {
+    programRepo;
+    constructor(workbookRepo, stateExhibitRepo, cashSettlementRepo, programRepo) {
         this.workbookRepo = workbookRepo;
         this.stateExhibitRepo = stateExhibitRepo;
         this.cashSettlementRepo = cashSettlementRepo;
+        this.programRepo = programRepo;
     }
-    async parseWorkbook(fileBuffer, filename, forceOverwrite = false) {
+    async parseWorkbook(fileBuffer, filename, forceOverwrite = false, overrideProgram) {
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
         const sheetNames = workbook.SheetNames;
         const isStarlight = sheetNames.some((name) => name.toLowerCase().includes('starlight'));
         if (isStarlight) {
-            return this.parseStarlightWorkbook(workbook, filename, forceOverwrite);
+            return this.parseStarlightWorkbook(workbook, filename, forceOverwrite, overrideProgram);
         }
         else {
-            return this.parseFUTWorkbook(workbook, filename, forceOverwrite);
+            return this.parseFUTWorkbook(workbook, filename, forceOverwrite, overrideProgram);
         }
     }
-    async parseStarlightWorkbook(workbook, filename, forceOverwrite = false) {
+    async parseStarlightWorkbook(workbook, filename, forceOverwrite = false, overrideProgram) {
         const sheetNames = workbook.SheetNames;
         const summarySheetName = sheetNames.find((name) => name === 'Starlight Excess' || name === 'Starlight APD') ||
             sheetNames.find((name) => name.toLowerCase().includes('starlight')) ||
@@ -124,6 +127,11 @@ let ExcelParserService = class ExcelParserService {
         else if (b4Val.includes('drp') || b4Val.includes('dpr') || fnLower.includes('drp') || fnLower.includes('dpr')) {
             program = 'DPR APD';
         }
+        if (overrideProgram) {
+            program = overrideProgram;
+        }
+        const dbProgram = await this.programRepo.findOne({ where: { name: program } });
+        const dbRates = dbProgram?.rates;
         const commRowIdx = this.findRowIndexByLabel(sheet, 'Ceding Commissions');
         let parsedComm = 32.0;
         if (commRowIdx !== -1) {
@@ -167,16 +175,16 @@ let ExcelParserService = class ExcelParserService {
             const rates = {
                 qs: 100,
                 cf: 5,
-                comm: parsedComm,
-                bb: 0.40,
-                ulae: parsedUlae,
+                comm: dbRates?.comm !== undefined ? dbRates.comm : parsedComm,
+                bb: dbRates?.boardsCharge !== undefined ? dbRates.boardsCharge : 0.40,
+                ulae: dbRates?.ulae !== undefined ? dbRates.ulae : parsedUlae,
                 xol: 2.0,
                 lr: 0.0,
-                lossPick: pLossPick || 51.8,
-                laeDcc: pLaeDcc,
-                laeAoe: pLaeAoe,
-                boardsCharge: 0.40,
-                lossRatioCap: 2.0,
+                lossPick: dbRates?.lossPick !== undefined ? dbRates.lossPick : (pLossPick || 51.8),
+                laeDcc: dbRates?.laeDcc !== undefined ? dbRates.laeDcc : pLaeDcc,
+                laeAoe: dbRates?.laeAoe !== undefined ? dbRates.laeAoe : pLaeAoe,
+                boardsCharge: dbRates?.boardsCharge !== undefined ? dbRates.boardsCharge : 0.40,
+                lossRatioCap: dbRates?.lossRatioCap !== undefined ? dbRates.lossRatioCap : 2.0,
             };
             await this.validateSequentialMonth(program, monthKey, 'Starlight');
             let workbookEntity = await this.workbookRepo.findOne({
@@ -301,7 +309,7 @@ let ExcelParserService = class ExcelParserService {
             workbooks: createdWorkbooks,
         };
     }
-    async parseFUTWorkbook(workbook, filename, forceOverwrite = false) {
+    async parseFUTWorkbook(workbook, filename, forceOverwrite = false, overrideProgram) {
         const sheetNames = workbook.SheetNames;
         const fnLower = filename ? filename.toLowerCase() : '';
         let program = 'Excess NX';
@@ -338,8 +346,23 @@ let ExcelParserService = class ExcelParserService {
         else if (fnLower.includes('dpr') || fnLower.includes('drp')) {
             program = 'DPR APD';
         }
+        if (overrideProgram) {
+            program = overrideProgram;
+        }
+        const dbProgram = await this.programRepo.findOne({ where: { name: program } });
+        const dbRates = dbProgram?.rates;
         const csSheet = workbook.Sheets['Cash Settlement'];
-        let rates = this.getDefaultRates(program);
+        const defaultRates = this.getDefaultRates(program);
+        let rates = {
+            ...defaultRates,
+            ...(dbRates || {}),
+        };
+        if (dbRates?.boardsCharge !== undefined) {
+            rates.bb = dbRates.boardsCharge;
+        }
+        if (dbRates?.lossRatioCap !== undefined) {
+            rates.lr = dbRates.lossRatioCap;
+        }
         let begBal = 0;
         let amtPaid = 0;
         if (csSheet) {
@@ -360,19 +383,19 @@ let ExcelParserService = class ExcelParserService {
             if (valCF !== 0)
                 rates.cf = valCF * 100;
             const valComm = getNumCell('P3');
-            if (valComm !== 0)
+            if (valComm !== 0 && dbRates?.comm === undefined)
                 rates.comm = valComm * 100;
             const valBB = getNumCell('P5');
-            if (valBB !== 0)
+            if (valBB !== 0 && dbRates?.boardsCharge === undefined)
                 rates.bb = valBB * 100;
             const valUlae = getNumCell('P6');
-            if (valUlae !== 0)
+            if (valUlae !== 0 && dbRates?.ulae === undefined)
                 rates.ulae = valUlae * 100;
             const valXol = getNumCell('P7');
             if (valXol !== 0)
                 rates.xol = valXol * 100;
             const valLr = getNumCell('P8');
-            if (valLr !== 0)
+            if (valLr !== 0 && dbRates?.lossRatioCap === undefined)
                 rates.lr = valLr * 100;
             begBal = getNumCell('L47');
             amtPaid = getNumCell('L49');
@@ -909,7 +932,9 @@ exports.ExcelParserService = ExcelParserService = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(workbook_entity_1.Workbook)),
     __param(1, (0, typeorm_1.InjectRepository)(state_exhibit_entity_1.StateExhibit)),
     __param(2, (0, typeorm_1.InjectRepository)(cash_settlement_entity_1.CashSettlement)),
+    __param(3, (0, typeorm_1.InjectRepository)(program_entity_1.Program)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository])
 ], ExcelParserService);

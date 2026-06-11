@@ -19,17 +19,32 @@ const typeorm_2 = require("typeorm");
 const workbook_entity_1 = require("../entities/workbook.entity");
 const state_exhibit_entity_1 = require("../entities/state-exhibit.entity");
 const cash_settlement_entity_1 = require("../entities/cash-settlement.entity");
+const program_entity_1 = require("../entities/program.entity");
 const excel_parser_service_1 = require("./excel-parser.service");
 let WorkbookService = class WorkbookService {
     workbookRepo;
     stateExhibitRepo;
     cashSettlementRepo;
+    programRepo;
     excelParserService;
-    constructor(workbookRepo, stateExhibitRepo, cashSettlementRepo, excelParserService) {
+    constructor(workbookRepo, stateExhibitRepo, cashSettlementRepo, programRepo, excelParserService) {
         this.workbookRepo = workbookRepo;
         this.stateExhibitRepo = stateExhibitRepo;
         this.cashSettlementRepo = cashSettlementRepo;
+        this.programRepo = programRepo;
         this.excelParserService = excelParserService;
+    }
+    async findPrograms() {
+        return this.programRepo.find({ order: { name: 'ASC' } });
+    }
+    async createProgram(name, rates) {
+        const existing = await this.programRepo.findOne({ where: { name } });
+        if (existing) {
+            existing.rates = rates;
+            return this.programRepo.save(existing);
+        }
+        const program = this.programRepo.create({ name, rates });
+        return this.programRepo.save(program);
     }
     async findAll() {
         return this.workbookRepo.find({
@@ -69,15 +84,15 @@ let WorkbookService = class WorkbookService {
         const workbook = await this.findOne(id);
         await this.workbookRepo.remove(workbook);
     }
-    async uploadWorkbook(fileBuffer, filename, forceOverwrite = false) {
-        const result = await this.excelParserService.parseWorkbook(fileBuffer, filename, forceOverwrite);
+    async uploadWorkbook(fileBuffer, filename, forceOverwrite = false, program) {
+        const result = await this.excelParserService.parseWorkbook(fileBuffer, filename, forceOverwrite, program);
         if (result && result.workbook && result.workbook.source === 'FUT') {
             await this.recalculateFUTReserves(result.workbook.id);
             result.workbook = await this.findOne(result.workbook.id);
         }
         return result;
     }
-    async generateITDExcel(fileBuffer) {
+    async generateITDExcel(fileBuffer, program) {
         return this.excelParserService.generateITDWorkbookFromStarlight(fileBuffer);
     }
     async updateMappings(workbookId, dto) {
@@ -471,7 +486,9 @@ exports.WorkbookService = WorkbookService = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(workbook_entity_1.Workbook)),
     __param(1, (0, typeorm_1.InjectRepository)(state_exhibit_entity_1.StateExhibit)),
     __param(2, (0, typeorm_1.InjectRepository)(cash_settlement_entity_1.CashSettlement)),
+    __param(3, (0, typeorm_1.InjectRepository)(program_entity_1.Program)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         excel_parser_service_1.ExcelParserService])

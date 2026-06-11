@@ -2,12 +2,14 @@ import { Repository } from 'typeorm';
 import { Workbook } from '../entities/workbook.entity';
 import { StateExhibit } from '../entities/state-exhibit.entity';
 import { CashSettlement } from '../entities/cash-settlement.entity';
+import { Program } from '../entities/program.entity';
 export declare class ExcelParserService {
     private readonly workbookRepo;
     private readonly stateExhibitRepo;
     private readonly cashSettlementRepo;
-    constructor(workbookRepo: Repository<Workbook>, stateExhibitRepo: Repository<StateExhibit>, cashSettlementRepo: Repository<CashSettlement>);
-    parseWorkbook(fileBuffer: Buffer, filename: string, forceOverwrite?: boolean): Promise<any>;
+    private readonly programRepo;
+    constructor(workbookRepo: Repository<Workbook>, stateExhibitRepo: Repository<StateExhibit>, cashSettlementRepo: Repository<CashSettlement>, programRepo: Repository<Program>);
+    parseWorkbook(fileBuffer: Buffer, filename: string, forceOverwrite?: boolean, overrideProgram?: string): Promise<any>;
     private parseStarlightWorkbook;
     private parseFUTWorkbook;
     recalculateTotalExhibit(workbookId: number): Promise<void>;

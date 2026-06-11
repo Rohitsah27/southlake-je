@@ -24,7 +24,13 @@ export function useWorkbooks() {
     }
   };
 
-  const selectWorkbook = async (id: number) => {
+  const selectWorkbook = async (id: number | null) => {
+    if (id === null || id === undefined) {
+      activeWorkbook.value = null;
+      activeWorkbookId.value = null;
+      localStorage.removeItem('starlight_active_workbook_key_db');
+      return;
+    }
     try {
       const wb = await api.getWorkbook(id);
       console.log('[useWorkbooks] Selected workbook:', wb);
@@ -59,13 +65,13 @@ export function useWorkbooks() {
     }
   };
 
-  const onFileUpload = async (event: Event) => {
+  const onFileUpload = async (event: Event, program?: string) => {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
     const file = input.files[0];
 
     try {
-      const res = await api.uploadWorkbook(file);
+      const res = await api.uploadWorkbook(file, false, program);
       alert(res.message);
       await loadWorkbooks();
       const allWbs = await api.getWorkbooks();
@@ -76,7 +82,7 @@ export function useWorkbooks() {
       if (err?.status === 409) {
         if (confirm(`${err.message}\n\nDo you want to overwrite it and store the same file data?`)) {
           try {
-            const res2 = await api.uploadWorkbook(file, true);
+            const res2 = await api.uploadWorkbook(file, true, program);
             alert(res2.message);
             await loadWorkbooks();
             const allWbs = await api.getWorkbooks();

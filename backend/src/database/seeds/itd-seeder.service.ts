@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Workbook } from '../../modules/workbook/entities/workbook.entity';
 import { StateExhibit } from '../../modules/workbook/entities/state-exhibit.entity';
 import { CashSettlement } from '../../modules/workbook/entities/cash-settlement.entity';
+import { Program } from '../../modules/workbook/entities/program.entity';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -18,6 +19,8 @@ export class ItdSeederService {
     private readonly stateExhibitRepo: Repository<StateExhibit>,
     @InjectRepository(CashSettlement)
     private readonly cashSettlementRepo: Repository<CashSettlement>,
+    @InjectRepository(Program)
+    private readonly programRepo: Repository<Program>,
   ) {}
 
   async clearAllData(): Promise<{ success: boolean; message: string }> {
@@ -26,6 +29,13 @@ export class ItdSeederService {
       .createQueryBuilder()
       .delete()
       .execute();
+
+    this.logger.log('Clearing all database programs...');
+    await this.programRepo
+      .createQueryBuilder()
+      .delete()
+      .execute();
+
     this.logger.log(`Clear complete. Affected rows: ${deleteRes.affected}`);
     return {
       success: true,

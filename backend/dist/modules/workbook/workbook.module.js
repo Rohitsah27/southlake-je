@@ -14,13 +14,14 @@ const workbook_service_1 = require("./services/workbook.service");
 const workbook_entity_1 = require("./entities/workbook.entity");
 const state_exhibit_entity_1 = require("./entities/state-exhibit.entity");
 const cash_settlement_entity_1 = require("./entities/cash-settlement.entity");
+const program_entity_1 = require("./entities/program.entity");
 const excel_parser_service_1 = require("./services/excel-parser.service");
 let WorkbookModule = class WorkbookModule {
 };
 exports.WorkbookModule = WorkbookModule;
 exports.WorkbookModule = WorkbookModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([workbook_entity_1.Workbook, state_exhibit_entity_1.StateExhibit, cash_settlement_entity_1.CashSettlement])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([workbook_entity_1.Workbook, state_exhibit_entity_1.StateExhibit, cash_settlement_entity_1.CashSettlement, program_entity_1.Program])],
         controllers: [workbook_controller_1.WorkbookController],
         providers: [workbook_service_1.WorkbookService, excel_parser_service_1.ExcelParserService],
         exports: [workbook_service_1.WorkbookService, excel_parser_service_1.ExcelParserService, typeorm_1.TypeOrmModule],

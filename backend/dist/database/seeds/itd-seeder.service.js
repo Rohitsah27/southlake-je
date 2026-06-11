@@ -53,21 +53,29 @@ const typeorm_2 = require("typeorm");
 const workbook_entity_1 = require("../../modules/workbook/entities/workbook.entity");
 const state_exhibit_entity_1 = require("../../modules/workbook/entities/state-exhibit.entity");
 const cash_settlement_entity_1 = require("../../modules/workbook/entities/cash-settlement.entity");
+const program_entity_1 = require("../../modules/workbook/entities/program.entity");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 let ItdSeederService = ItdSeederService_1 = class ItdSeederService {
     workbookRepo;
     stateExhibitRepo;
     cashSettlementRepo;
+    programRepo;
     logger = new common_1.Logger(ItdSeederService_1.name);
-    constructor(workbookRepo, stateExhibitRepo, cashSettlementRepo) {
+    constructor(workbookRepo, stateExhibitRepo, cashSettlementRepo, programRepo) {
         this.workbookRepo = workbookRepo;
         this.stateExhibitRepo = stateExhibitRepo;
         this.cashSettlementRepo = cashSettlementRepo;
+        this.programRepo = programRepo;
     }
     async clearAllData() {
         this.logger.log('Clearing all database workbook data...');
         const deleteRes = await this.workbookRepo
+            .createQueryBuilder()
+            .delete()
+            .execute();
+        this.logger.log('Clearing all database programs...');
+        await this.programRepo
             .createQueryBuilder()
             .delete()
             .execute();
@@ -365,7 +373,9 @@ exports.ItdSeederService = ItdSeederService = ItdSeederService_1 = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(workbook_entity_1.Workbook)),
     __param(1, (0, typeorm_1.InjectRepository)(state_exhibit_entity_1.StateExhibit)),
     __param(2, (0, typeorm_1.InjectRepository)(cash_settlement_entity_1.CashSettlement)),
+    __param(3, (0, typeorm_1.InjectRepository)(program_entity_1.Program)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository])
 ], ItdSeederService);
